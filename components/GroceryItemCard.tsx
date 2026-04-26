@@ -2,7 +2,13 @@ import type { GroceryRequest } from "@prisma/client";
 import { AdminApprovalPanel } from "./AdminApprovalPanel";
 import { StatusPill, statusTone } from "./StatusPill";
 
-export function GroceryItemCard({ request, actorId }: { request: GroceryRequest; actorId: string }) {
+type GroceryRequestWithRequester = GroceryRequest & {
+  requester?: {
+    name: string;
+  };
+};
+
+export function GroceryItemCard({ request, actorId }: { request: GroceryRequestWithRequester; actorId: string }) {
   return (
     <article className="rounded-lg border border-cocoa/10 bg-paper p-4 shadow-panel">
       <div className="flex items-start justify-between gap-3">
@@ -13,6 +19,7 @@ export function GroceryItemCard({ request, actorId }: { request: GroceryRequest;
             {request.quantity ?? "Qty not set"}
             {request.unit ? ` ${request.unit}` : ""} · {request.urgency.toLowerCase()} urgency
           </p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-bark/80">Requested by {request.requester?.name ?? "Household"}</p>
         </div>
         <StatusPill tone={statusTone(request.status)}>{request.status.replaceAll("_", " ")}</StatusPill>
       </div>
