@@ -1,4 +1,5 @@
 import type { RecurringPattern, GroceryItem } from "@prisma/client";
+import { MemorySuggestionCard } from "./MemorySuggestionCard";
 
 type Suggestion = RecurringPattern & {
   groceryItem: GroceryItem;
@@ -12,20 +13,23 @@ export function RecurringSuggestionsPanel({ suggestions }: { suggestions: Sugges
   });
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
-      <h2 className="text-lg font-semibold text-ink">Recurring suggestions</h2>
+    <section className="rounded-lg border border-forest/15 bg-paper p-5 shadow-panel">
+      <p className="text-xs font-bold uppercase tracking-[0.24em] text-bark">Memory</p>
+      <h2 className="font-editorial mt-2 text-3xl font-semibold text-forest">Running low</h2>
       <div className="mt-3 grid gap-2">
         {due.length ? (
           due.map((suggestion) => {
             const daysSince = suggestion.lastOrderedAt ? Math.floor((Date.now() - suggestion.lastOrderedAt.getTime()) / (24 * 60 * 60 * 1000)) : null;
             return (
-              <p key={suggestion.id} className="rounded-md bg-skywash px-3 py-2 text-sm text-slate-700">
-                {suggestion.groceryItem.displayName} is usually ordered every {suggestion.averageIntervalDays} days. Last ordered {daysSince} days ago.
-              </p>
+              <MemorySuggestionCard
+                key={suggestion.id}
+                title={suggestion.groceryItem.displayName}
+                detail={`Usually ordered every ${suggestion.averageIntervalDays} days. Last ordered ${daysSince} days ago.`}
+              />
             );
           })
         ) : (
-          <p className="text-sm text-slate-600">No recurring items are due right now.</p>
+          <p className="text-sm text-bark">No recurring items are due right now.</p>
         )}
       </div>
     </section>
