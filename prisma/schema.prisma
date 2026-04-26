@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HouseholdRole {
+  ADMIN
+  MEMBER
+  COOK
+}
+
+enum GroceryUrgency {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum GroceryRequestStatus {
+  PENDING
+  APPROVED
+  ADDED_TO_CART
+  ORDERED
+  REJECTED
+  PURCHASED_OFFLINE
+}
+
+enum CartDraftStatus {
+  DRAFT
+  READY_FOR_APPROVAL
+  APPROVED
+  ORDERED
+  CANCELLED
+}
+
+enum GroceryProvider {
+  MOCK
+  SWIGGY_INSTAMART
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  LIMITED
+  UNAVAILABLE
+  SUBSTITUTED
+}
+
+model User {
+  id                   String            @id @default(cuid())
+  name                 String
+  email                String?           @unique
+  phone                String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  createdHouseholds    Household[]       @relation("CreatedHouseholds")
+  memberships          HouseholdMember[]
+  groceryRequests      GroceryRequest[]  @relation("RequestedGroceries")
+  createdCarts         CartDraft[]       @relation("CreatedCarts")
+  approvedCarts        CartDraft[]       @relation("ApprovedCarts")
+  placedOrders         Order[]           @relation("PlacedOrders")
+  auditLogs            AuditLog[]
+}
+
+model Household {
+  id                 String              @id @default(cuid())
+  name               String
+  location           String?
+  createdBy          String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  creator            User                @relation("CreatedHouseholds", fields: [createdBy], references: [id])
+  members            HouseholdMember[]
+  groceryRequests    GroceryRequest[]
+  preferences        GroceryPreference[]
+  cartDrafts         CartDraft[]
+  orders             Order[]
+  recurringPatterns  RecurringPattern[]
+  auditLogs          AuditLog[]
+}
+
+model HouseholdMember {
+  id          String        @id @default(cuid())
+  householdId String
+  userId      String
+  role        HouseholdRole
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, userId])
+}
+
+model GroceryItem {
+  id                 String              @id @default(cuid())
+  canonicalName      String              @unique
+  displayName        String
+  category           String
+  defaultUnit        String?
+  synonyms           String[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  requests           GroceryRequest[]
+  preferences        GroceryPreference[]
+  orderItems         OrderItem[]
+  recurringPatterns  RecurringPattern[]
+}
+
+model GroceryRequest {
+  id            String               @id @default(cuid())
+  householdId   String
+  groceryItemId String?
+  rawText       String
+  canonicalName String
+  displayName   String
+  quantity      Float?
+  unit          String?
+  category      String
+  urgency       GroceryUrgency       @default(MEDIUM)
+  status        GroceryRequestStatus @default(PENDING)
+  requestedBy   String
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  household     Household            @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  groceryItem   GroceryItem?         @relation(fields: [groceryItemId], references: [id])
+  requester     User                 @relation("RequestedGroceries", fields: [requestedBy], references: [id])
+  cartItems     CartItem[]
+
+  @@index([householdId, status])
+  @@index([householdId, canonicalName])
+}
+
+model GrocerySynonym {
+  id            String   @id @default(cuid())
+  canonicalName String
+  synonym       String   @unique
+  language      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([canonicalName])
+}
+
+model GroceryPreference {
+  id                String      @id @default(cuid())
+  householdId       String
+  groceryItemId     String
+  preferredBrand    String?
+  preferredQuantity Float?
+  preferredUnit     String?
+  avoidBrands       String[]
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  household         Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  groceryItem       GroceryItem @relation(fields: [groceryItemId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, groceryItemId])
+}
+
+model CartDraft {
+  id             String          @id @default(cuid())
+  householdId    String
+  status         CartDraftStatus @default(DRAFT)
+  estimatedTotal Float           @default(0)
+  provider       GroceryProvider @default(MOCK)
+  createdBy      String
+  approvedBy     String?
+  createdAt      DateTime        @default(now())
+  approvedAt     DateTime?
+  updatedAt      DateTime        @updatedAt
+  household      Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  creator        User            @relation("CreatedCarts", fields: [createdBy], references: [id])
+  approver       User?           @relation("ApprovedCarts", fields: [approvedBy], references: [id])
+  items          CartItem[]
+  order          Order?
+
+  @@index([householdId, status])
+}
+
+model CartItem {
+  id                 String             @id @default(cuid())
+  cartDraftId        String
+  groceryRequestId   String
+  productId          String
+  productName        String
+  brand              String?
+  quantity           Float?
+  unit               String?
+  price              Float
+  availabilityStatus AvailabilityStatus
+  substitutionReason String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  cartDraft          CartDraft          @relation(fields: [cartDraftId], references: [id], onDelete: Cascade)
+  groceryRequest     GroceryRequest     @relation(fields: [groceryRequestId], references: [id])
+}
+
+model Order {
+  id              String          @id @default(cuid())
+  householdId     String
+  cartDraftId     String          @unique
+  provider        GroceryProvider
+  externalOrderId String?
+  status          String
+  totalAmount     Float
+  placedBy        String
+  placedAt        DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  household       Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  cartDraft       CartDraft       @relation(fields: [cartDraftId], references: [id])
+  placer          User            @relation("PlacedOrders", fields: [placedBy], references: [id])
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id            String      @id @default(cuid())
+  orderId       String
+  groceryItemId String?
+  productName   String
+  brand         String?
+  quantity      Float?
+  unit          String?
+  price         Float
+  createdAt     DateTime    @default(now())
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  groceryItem   GroceryItem? @relation(fields: [groceryItemId], references: [id])
+}
+
+model RecurringPattern {
+  id                  String      @id @default(cuid())
+  householdId         String
+  groceryItemId       String
+  averageIntervalDays Int
+  usualQuantity       Float?
+  usualUnit           String?
+  preferredBrand      String?
+  lastOrderedAt       DateTime?
+  confidenceScore     Float       @default(0)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  household           Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  groceryItem         GroceryItem @relation(fields: [groceryItemId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, groceryItemId])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  householdId String
+  actorId     String?
+  action      String
+  entityType  String
+  entityId    String
+  before      Json?
+  after       Json?
+  createdAt   DateTime  @default(now())
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  actor       User?     @relation(fields: [actorId], references: [id])
+
+  @@index([householdId, entityType, entityId])
+}
