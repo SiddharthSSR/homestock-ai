@@ -83,6 +83,7 @@ export function AddGroceryRequestForm({
         <p className="text-xs font-bold uppercase tracking-[0.24em] text-bark">Natural language request</p>
         <textarea
           className="min-h-36 rounded-lg border border-cocoa/15 bg-cream px-4 py-3 text-lg leading-7 text-cocoa outline-none focus:border-forest"
+          aria-label="Natural language grocery request"
           value={rawText}
           onChange={(event) => setRawText(event.target.value)}
           placeholder="Tell HomeStock what needs ordering"
@@ -92,6 +93,7 @@ export function AddGroceryRequestForm({
       <div className="flex flex-wrap gap-2">
         {["From cook", "Urgent", "For today", "Monthly stock"].map((chip) => (
           <button
+            type="button"
             key={chip}
             className="rounded-full border border-cocoa/15 bg-cream px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cocoa hover:bg-peach/50"
             onClick={() => applyChip(chip)}
@@ -116,7 +118,7 @@ export function AddGroceryRequestForm({
           <span className="font-bold uppercase tracking-[0.16em] text-bark">Notes</span>
           <input className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-cocoa" value={notes} onChange={(event) => setNotes(event.target.value)} />
         </label>
-        <button className="inline-flex items-center justify-center gap-2 rounded-md bg-cocoa px-4 py-3 text-sm font-bold uppercase tracking-[0.16em] text-paper hover:bg-forest" onClick={parseRequest}>
+        <button type="button" className="inline-flex items-center justify-center gap-2 rounded-md bg-cocoa px-4 py-3 text-sm font-bold uppercase tracking-[0.16em] text-paper hover:bg-forest" onClick={parseRequest}>
           <Sparkles className="h-4 w-4" />
           Parse request
         </button>
@@ -165,7 +167,7 @@ export function AddGroceryRequestForm({
         </p>
       </div>
 
-      <button className="inline-flex items-center justify-center gap-2 rounded-md bg-forest px-5 py-3 text-sm font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" onClick={submit}>
+      <button type="button" className="inline-flex items-center justify-center gap-2 rounded-md bg-forest px-5 py-3 text-sm font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" onClick={submit}>
         Add to pending list
         <ArrowRight className="h-4 w-4" />
       </button>

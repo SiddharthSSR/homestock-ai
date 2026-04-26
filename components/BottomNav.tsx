@@ -5,10 +5,10 @@ import { CheckCircle2, Home, ListChecks, Plus } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const items = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/grocery", label: "List", icon: ListChecks },
-  { href: "/add", label: "Add", icon: Plus },
-  { href: "/approve", label: "Approve", icon: CheckCircle2 }
+  { href: "/", label: "Home", icon: Home, matches: ["/"] },
+  { href: "/grocery", label: "List", icon: ListChecks, matches: ["/grocery"] },
+  { href: "/add", label: "Add", icon: Plus, matches: ["/add"] },
+  { href: "/approve", label: "Approve", icon: CheckCircle2, matches: ["/approve", "/cart"] }
 ];
 
 export function BottomNav() {
@@ -19,7 +19,7 @@ export function BottomNav() {
       <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
         {items.map((item) => {
           const Icon = item.icon;
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const active = item.matches.some((match) => (match === "/" ? pathname === "/" : pathname.startsWith(match)));
           return (
             <Link
               key={`${item.href}-${item.label}`}

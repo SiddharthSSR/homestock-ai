@@ -3,12 +3,13 @@ type PageHeaderProps = {
   title: string;
   description?: string;
   meta?: string;
+  className?: string;
   children?: React.ReactNode;
 };
 
-export function PageHeader({ eyebrow = "Household", title, description, meta, children }: PageHeaderProps) {
+export function PageHeader({ eyebrow = "Household", title, description, meta, className = "", children }: PageHeaderProps) {
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-cocoa/10 bg-paper shadow-editorial">
+    <section className={`min-w-0 flex-1 overflow-hidden rounded-[2rem] border border-cocoa/10 bg-paper shadow-editorial ${className}`}>
       <div className="grid gap-6 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-end">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-bark">{eyebrow}</p>

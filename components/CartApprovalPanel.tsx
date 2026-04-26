@@ -14,7 +14,9 @@ export function CartApprovalPanel({ cartId, actorId, disabled }: { cartId: strin
 
   return (
     <button
+      type="button"
       disabled={disabled}
+      aria-label="Approve cart draft"
       className="inline-flex items-center gap-2 rounded-md bg-forest px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-paper hover:bg-cocoa disabled:cursor-not-allowed disabled:bg-bark/30"
       onClick={approve}
     >

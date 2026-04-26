@@ -26,20 +26,22 @@ export function ApprovalActions({ requestId, actorId }: { requestId: string; act
   return (
     <div className="flex flex-wrap gap-2">
       <button
+        type="button"
         title="Approve"
+        aria-label="Approve grocery request"
         className="inline-flex items-center gap-2 rounded-md bg-forest px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-paper hover:bg-cocoa"
         onClick={() => mutate(`/api/grocery-requests/${requestId}/approve`)}
       >
         <Check className="h-4 w-4" />
         Approve
       </button>
-      <button title="Reject" className="rounded-md border border-cocoa/15 bg-paper p-2 text-cocoa hover:bg-oat" onClick={() => mutate(`/api/grocery-requests/${requestId}/reject`)}>
+      <button type="button" title="Reject" aria-label="Reject grocery request" className="rounded-md border border-cocoa/15 bg-paper p-2 text-cocoa hover:bg-oat" onClick={() => mutate(`/api/grocery-requests/${requestId}/reject`)}>
         <X className="h-4 w-4" />
       </button>
-      <button title="Edit quantity" className="rounded-md border border-cocoa/15 bg-paper p-2 text-cocoa hover:bg-oat" onClick={edit}>
+      <button type="button" title="Edit quantity" aria-label="Edit grocery request quantity" className="rounded-md border border-cocoa/15 bg-paper p-2 text-cocoa hover:bg-oat" onClick={edit}>
         <Pencil className="h-4 w-4" />
       </button>
-      <button title="Purchased offline" className="rounded-md border border-cocoa/15 bg-paper p-2 text-cocoa hover:bg-oat" onClick={() => mutate(`/api/grocery-requests/${requestId}/purchased-offline`)}>
+      <button type="button" title="Purchased offline" aria-label="Mark grocery request as purchased offline" className="rounded-md border border-cocoa/15 bg-paper p-2 text-cocoa hover:bg-oat" onClick={() => mutate(`/api/grocery-requests/${requestId}/purchased-offline`)}>
         <ShoppingBag className="h-4 w-4" />
       </button>
     </div>

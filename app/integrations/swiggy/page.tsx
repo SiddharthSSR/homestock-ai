@@ -68,7 +68,7 @@ export default function SwiggyIntegrationPage() {
       <CategorySection title="Official docs">
         <div className="grid gap-3 md:grid-cols-3">
           {docsLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="flex items-center justify-between gap-3 rounded-lg border border-cocoa/10 bg-paper p-4 text-cocoa shadow-panel hover:bg-cream">
+            <Link key={link.href} href={link.href} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3 rounded-lg border border-cocoa/10 bg-paper p-4 text-cocoa shadow-panel hover:bg-cream">
               <span className="font-semibold">{link.label}</span>
               <ExternalLink className="h-4 w-4" />
             </Link>

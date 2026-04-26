@@ -44,8 +44,8 @@ export default async function HouseholdPage() {
       <section className="rounded-[1.5rem] border border-cocoa/10 bg-paper p-5 shadow-editorial">
         <p className="text-xs font-bold uppercase tracking-[0.24em] text-bark">Create household</p>
         <form action="/api/households" method="post" className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-          <input name="name" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-cocoa" placeholder="Household name" required />
-          <input name="location" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-cocoa" placeholder="Location" />
+          <input name="name" aria-label="Household name" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-cocoa" placeholder="Household name" required />
+          <input name="location" aria-label="Household location" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-cocoa" placeholder="Location" />
           <input type="hidden" name="createdBy" value={actorId} />
           <button className="rounded-md bg-forest px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-paper hover:bg-cocoa">Create</button>
         </form>
@@ -61,14 +61,14 @@ export default async function HouseholdPage() {
                 <p className="mt-1 text-sm text-bark">{household.location ?? "No location set"}</p>
               </div>
               <form action={`/api/households/${household.id}/members`} method="post" className="flex flex-wrap gap-2">
-                <select name="userId" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
+                <select name="userId" aria-label="Household member" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.name}
                     </option>
                   ))}
                 </select>
-                <select name="role" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
+                <select name="role" aria-label="Household role" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
                   <option value="ADMIN">Admin</option>
                   <option value="MEMBER">Member</option>
                   <option value="COOK">Cook</option>

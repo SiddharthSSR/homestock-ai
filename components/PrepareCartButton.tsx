@@ -14,7 +14,9 @@ export function PrepareCartButton({ householdId, actorId, disabled }: { househol
 
   return (
     <button
+      type="button"
       disabled={disabled}
+      aria-label="Prepare mock cart"
       className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
       onClick={prepare}
     >

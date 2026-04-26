@@ -71,7 +71,7 @@ export default async function HomePage() {
             tone="peach"
             icon={AlertCircle}
             action={
-              <Link className="inline-flex rounded-md bg-peachDeep px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" href="/grocery">
+              <Link className="inline-flex rounded-md bg-peachDeep px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" href="/approve">
                 Review
               </Link>
             }
@@ -92,7 +92,7 @@ export default async function HomePage() {
               title={item.title}
               detail={`${item.category} · ${item.detail}`}
               action={
-                <Link className="inline-flex rounded-md border border-forest/30 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-forest hover:bg-cream" href="/grocery">
+                <Link className="inline-flex rounded-md border border-forest/30 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-forest hover:bg-cream" href="/add">
                   Add
                 </Link>
               }
