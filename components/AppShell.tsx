@@ -11,14 +11,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-editorial text-2xl font-semibold text-cocoa">HomeStock AI</span>
           </Link>
           <div className="hidden items-center gap-1 text-sm font-semibold md:flex">
+            <Link className="rounded-md px-3 py-2 text-bark hover:bg-paper" href="/memory">
+              Memory
+            </Link>
             <Link className="rounded-md px-3 py-2 text-bark hover:bg-paper" href="/household">
               Household
             </Link>
             <Link className="rounded-md px-3 py-2 text-bark hover:bg-paper" href="/grocery">
               Grocery
             </Link>
+            <Link className="rounded-md px-3 py-2 text-bark hover:bg-paper" href="/approve">
+              Approve
+            </Link>
             <Link className="rounded-md px-3 py-2 text-bark hover:bg-paper" href="/cart">
               Cart
+            </Link>
+            <Link className="rounded-md px-3 py-2 text-bark hover:bg-paper" href="/integrations/swiggy">
+              Swiggy
             </Link>
           </div>
         </nav>
