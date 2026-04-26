@@ -8,7 +8,7 @@ const items = [
   { href: "/", label: "Home", icon: Home },
   { href: "/grocery", label: "List", icon: ListChecks },
   { href: "/add", label: "Add", icon: Plus },
-  { href: "/cart", label: "Approve", icon: CheckCircle2 }
+  { href: "/approve", label: "Approve", icon: CheckCircle2 }
 ];
 
 export function BottomNav() {
