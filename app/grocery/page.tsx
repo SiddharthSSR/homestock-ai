@@ -7,6 +7,7 @@ import { PrepareCartButton } from "@/components/PrepareCartButton";
 import { RecurringSuggestionsPanel } from "@/components/RecurringSuggestionsPanel";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
+import { findDuplicateHints } from "@/lib/grocery/duplicate-hints";
 import { prisma } from "@/lib/prisma";
 import { getDefaultActorId, getDefaultHouseholdId } from "@/lib/services/household-service";
 
@@ -30,6 +31,7 @@ export default async function GroceryPage({ searchParams }: { searchParams: Prom
   const approvedCount = requests.filter((request) => request.status === "APPROVED").length;
   const pendingCount = requests.filter((request) => request.status === "PENDING").length;
   const urgentCount = requests.filter((request) => request.urgency === "HIGH" && request.status !== "REJECTED").length;
+  const duplicateHints = findDuplicateHints(requests);
 
   return (
     <div className="grid gap-6">
@@ -50,18 +52,20 @@ export default async function GroceryPage({ searchParams }: { searchParams: Prom
         <SummaryCard label="Urgent" value={urgentCount} detail="Prioritize today" tone="paper" icon={ShoppingCart} />
       </section>
 
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cocoa/10 bg-peach/45 p-5 shadow-panel">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusPill tone="cart">Duplicate hint</StatusPill>
-            <p className="font-semibold text-cocoa">Dahi and curd look similar. Merge?</p>
+      {duplicateHints.length ? (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cocoa/10 bg-peach/45 p-5 shadow-panel">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusPill tone="cart">Duplicate hint</StatusPill>
+              <p className="font-semibold text-cocoa">{formatDuplicateNames(duplicateHints[0].names)} look similar. Merge?</p>
+            </div>
+            <p className="mt-2 text-sm text-bark">Review these synonym matches before merging household requests.</p>
           </div>
-          <p className="mt-2 text-sm text-bark">This is the review pattern for synonym matches before automatic merges become configurable.</p>
-        </div>
-        <Link className="rounded-md border border-cocoa/20 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/add">
-          Add request
-        </Link>
-      </section>
+          <Link className="rounded-md border border-cocoa/20 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/add">
+            Add request
+          </Link>
+        </section>
+      ) : null}
 
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cocoa/10 bg-paper p-5 shadow-panel">
         <p className="text-sm text-bark">
@@ -76,4 +80,9 @@ export default async function GroceryPage({ searchParams }: { searchParams: Prom
       <GroceryGroupedList requests={requests} actorId={actorId} />
     </div>
   );
+}
+
+function formatDuplicateNames(names: string[]) {
+  const [first, second] = names;
+  return [first, second].filter(Boolean).join(" and ");
 }

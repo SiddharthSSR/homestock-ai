@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { ParsedGroceryItem, parseGroceryText } from "@/lib/grocery/parser";
+import { serializeGroceryItems } from "@/lib/grocery/serialize";
 import { normalizeGroceryName } from "@/lib/grocery/synonyms";
 import { ParsedItemsPreview } from "./ParsedItemsPreview";
 import { StatusPill } from "./StatusPill";
@@ -94,7 +95,7 @@ export function AddGroceryRequestForm({
       return;
     }
 
-    const requestText = items.length ? serializeItems(items) : rawText;
+    const requestText = items.length ? serializeGroceryItems(items) : rawText;
     setIsSaving(true);
 
     try {
@@ -257,12 +258,6 @@ export function AddGroceryRequestForm({
 
 function withLocalIds(items: ParsedGroceryItem[]): EditableParsedItem[] {
   return items.map((item, index) => ({ ...item, localId: `${item.canonicalName}-${index}` }));
-}
-
-function serializeItems(items: EditableParsedItem[]) {
-  return items
-    .map((item) => [item.quantity, item.unit, item.displayName.trim()].filter(Boolean).join(" "))
-    .join(", ");
 }
 
 function mergeNote(current: string, next: string) {
