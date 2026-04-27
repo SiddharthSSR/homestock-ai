@@ -24,6 +24,7 @@ export default async function AddRequestPage({ searchParams }: { searchParams: P
       id: true,
       canonicalName: true,
       displayName: true,
+      unit: true,
       status: true
     },
     orderBy: { createdAt: "desc" }

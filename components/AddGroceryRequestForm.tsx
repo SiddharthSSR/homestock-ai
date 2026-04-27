@@ -12,6 +12,7 @@ type ExistingRequest = {
   id: string;
   canonicalName: string;
   displayName: string;
+  unit: string | null;
   status: string;
 };
 
@@ -44,7 +45,7 @@ export function AddGroceryRequestForm({
 
   const duplicateHints = useMemo(() => {
     return items.flatMap((item) => {
-      const match = existingRequests.find((request) => request.canonicalName === item.canonicalName && request.status !== "REJECTED");
+      const match = existingRequests.find((request) => request.canonicalName === item.canonicalName && request.status === "PENDING" && quantitiesAreMergeable(request.unit, item.unit));
       return match ? [{ incoming: item.displayName, existing: match.displayName, status: match.status }] : [];
     });
   }, [existingRequests, items]);
@@ -264,4 +265,8 @@ function mergeNote(current: string, next: string) {
   if (!current) return next;
   if (current.includes(next)) return current;
   return `${current}; ${next}`;
+}
+
+function quantitiesAreMergeable(existingUnit: string | null, incomingUnit: string | null) {
+  return existingUnit === incomingUnit || existingUnit === null || incomingUnit === null;
 }
