@@ -13,10 +13,10 @@ export function HouseholdSwitcher({ households, currentHouseholdId }: { househol
   }
 
   return (
-    <label className="grid gap-1 text-sm">
-      <span className="font-medium text-slate-700">Household</span>
+    <label className="grid w-full gap-1 text-sm lg:w-auto">
+      <span className="font-semibold text-bark">Household</span>
       <select
-        className="min-w-64 rounded-md border border-slate-300 bg-white px-3 py-2"
+        className="w-full rounded-xl border border-cocoa/15 bg-paper px-3 py-2 text-cocoa shadow-sm outline-none transition focus:border-forest focus:ring-2 focus:ring-sage/30 lg:min-w-64"
         value={currentHouseholdId}
         onChange={(event) => onChange(event.target.value)}
       >

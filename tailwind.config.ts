@@ -24,6 +24,10 @@ const config: Config = {
       boxShadow: {
         panel: "0 1px 2px rgba(45, 33, 28, 0.08)",
         editorial: "0 18px 40px rgba(45, 33, 28, 0.08)"
+      },
+      fontFamily: {
+        sans: ["var(--font-inter)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        editorial: ["var(--font-fraunces)", "Fraunces", "Georgia", "serif"]
       }
     }
   },

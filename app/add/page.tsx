@@ -31,7 +31,7 @@ export default async function AddRequestPage({ searchParams }: { searchParams: P
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
         <PageHeader
           eyebrow="Add request"
           title="Tell the household what is needed"

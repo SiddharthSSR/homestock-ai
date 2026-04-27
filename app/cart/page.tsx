@@ -27,7 +27,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
         <PageHeader
           eyebrow="Cart draft"
           title="Mock Cart Review"
