@@ -87,7 +87,7 @@ export default async function ApprovePage({ searchParams }: { searchParams: Prom
               </div>
               {request.notes ? <p className="mt-4 rounded-md bg-cream px-3 py-2 text-sm text-bark">{request.notes}</p> : null}
               <div className="mt-4">
-                <ApprovalActions requestId={request.id} actorId={actorId} />
+                <ApprovalActions requestId={request.id} actorId={actorId} showSecondaryActions={false} />
               </div>
             </article>
           ))
