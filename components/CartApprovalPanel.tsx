@@ -14,8 +14,10 @@ export function CartApprovalPanel({ cartId, actorId, disabled }: { cartId: strin
 
   return (
     <button
+      type="button"
       disabled={disabled}
-      className="inline-flex items-center gap-2 rounded-md bg-leaf px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+      aria-label="Approve cart draft"
+      className="inline-flex items-center gap-2 rounded-md bg-forest px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-paper hover:bg-cocoa disabled:cursor-not-allowed disabled:bg-bark/30"
       onClick={approve}
     >
       <CheckCircle className="h-4 w-4" />

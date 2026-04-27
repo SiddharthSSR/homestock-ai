@@ -1,8 +1,12 @@
-import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
+import Link from "next/link";
+import { AlertCircle, CheckCircle2, ListPlus, ShoppingCart } from "lucide-react";
 import { GroceryGroupedList } from "@/components/GroceryGroupedList";
-import { GroceryInputBox } from "@/components/GroceryInputBox";
+import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
+import { PageHeader } from "@/components/PageHeader";
 import { PrepareCartButton } from "@/components/PrepareCartButton";
 import { RecurringSuggestionsPanel } from "@/components/RecurringSuggestionsPanel";
+import { StatusPill } from "@/components/StatusPill";
+import { SummaryCard } from "@/components/SummaryCard";
 import { prisma } from "@/lib/prisma";
 import { getDefaultActorId, getDefaultHouseholdId } from "@/lib/services/household-service";
 
@@ -15,6 +19,7 @@ export default async function GroceryPage({ searchParams }: { searchParams: Prom
   const householdId = params.householdId ?? households[0]?.id ?? (await getDefaultHouseholdId());
   const requests = await prisma.groceryRequest.findMany({
     where: { householdId },
+    include: { requester: { select: { name: true } } },
     orderBy: [{ status: "asc" }, { category: "asc" }, { createdAt: "desc" }]
   });
   const recurringPatterns = await prisma.recurringPattern.findMany({
@@ -23,25 +28,46 @@ export default async function GroceryPage({ searchParams }: { searchParams: Prom
     orderBy: { confidenceScore: "desc" }
   });
   const approvedCount = requests.filter((request) => request.status === "APPROVED").length;
-  const urgentCount = requests.filter((request) => request.urgency === "HIGH" && request.status === "APPROVED").length;
+  const pendingCount = requests.filter((request) => request.status === "PENDING").length;
+  const urgentCount = requests.filter((request) => request.urgency === "HIGH" && request.status !== "REJECTED").length;
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-ink">Grocery memory</h1>
-          <p className="mt-1 text-sm text-slate-600">Requests are grouped by category and kept separate from checkout.</p>
-        </div>
+      <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+        <PageHeader
+          eyebrow="Grocery memory"
+          title="Household List"
+          meta={`${requests.length} items`}
+          description="Review every request by category, keep duplicates visible, and approve only what should move toward a cart."
+        />
         <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
       </div>
 
-      <GroceryInputBox householdId={householdId} actorId={actorId} />
+      <section className="grid gap-3 md:grid-cols-4">
+        <SummaryCard label="Total requests" value={requests.length} detail="Across all statuses" tone="lavender" icon={ListPlus} />
+        <SummaryCard label="Needs approval" value={pendingCount} detail="Waiting for admin" tone="peach" icon={AlertCircle} />
+        <SummaryCard label="Approved" value={approvedCount} detail="Ready for mock cart" tone="sage" icon={CheckCircle2} />
+        <SummaryCard label="Urgent" value={urgentCount} detail="Prioritize today" tone="paper" icon={ShoppingCart} />
+      </section>
 
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-5 shadow-panel">
-        <p className="text-sm text-slate-700">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cocoa/10 bg-peach/45 p-5 shadow-panel">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill tone="cart">Duplicate hint</StatusPill>
+            <p className="font-semibold text-cocoa">Dahi and curd look similar. Merge?</p>
+          </div>
+          <p className="mt-2 text-sm text-bark">This is the review pattern for synonym matches before automatic merges become configurable.</p>
+        </div>
+        <Link className="rounded-md border border-cocoa/20 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/add">
+          Add request
+        </Link>
+      </section>
+
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cocoa/10 bg-paper p-5 shadow-panel">
+        <p className="text-sm text-bark">
           {approvedCount >= 5 || urgentCount > 0
             ? `You have ${approvedCount} approved items${urgentCount ? ` and ${urgentCount} urgent item` : ""}. A cart is ready to prepare.`
-            : `Approve at least 5 items or mark an approved item urgent before preparing a cart.`}
+            : "Approve items first, then prepare a mock cart for review."}
         </p>
         <PrepareCartButton householdId={householdId} actorId={actorId} disabled={approvedCount === 0} />
       </section>
