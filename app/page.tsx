@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, IndianRupee, ListChecks } from "lucide-react";
+import { AddMemorySuggestionButton } from "@/components/AddMemorySuggestionButton";
 import { CategorySection } from "@/components/CategorySection";
 import { EmptyState } from "@/components/EmptyState";
 import { MemorySuggestionCard } from "@/components/MemorySuggestionCard";
@@ -7,29 +8,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
 import { prisma } from "@/lib/prisma";
+import { getHouseholdMemory } from "@/lib/services/memory-service";
+import { getDefaultActorId } from "@/lib/services/household-service";
 
 export const dynamic = "force-dynamic";
-
-const dashboardSummary = {
-  // TODO: Replace with a dashboard aggregate service once Phase 1 data has enough real activity.
-  itemsInList: 12,
-  needsApproval: 3,
-  estimatedCart: "₹1,250",
-  runningLow: 2
-};
-
-const runningLowItems = [
-  {
-    title: "Aashirvaad Atta (5kg)",
-    category: "Staples",
-    detail: "Last bought 28 days ago"
-  },
-  {
-    title: "Amul Taaza Milk (1L)",
-    category: "Dairy",
-    detail: "Usually ordered every 2 days"
-  }
-];
 
 const recentActivity = [
   {
@@ -51,8 +33,26 @@ const recentActivity = [
 
 export default async function HomePage() {
   const household = await prisma.household.findFirst({ orderBy: { createdAt: "asc" } });
+  const actorId = await getDefaultActorId();
   const householdName = household?.name ?? "Sharma Family";
   const headerMeta = formatHeaderMeta(new Date());
+  const [requestCounts, latestCart, memory] = household
+    ? await Promise.all([
+        prisma.groceryRequest.groupBy({
+          by: ["status"],
+          where: { householdId: household.id },
+          _count: { _all: true }
+        }),
+        prisma.cartDraft.findFirst({
+          where: { householdId: household.id },
+          orderBy: { createdAt: "desc" }
+        }),
+        getHouseholdMemory(household.id)
+      ])
+    : [[], null, null] as const;
+  const itemsInList = requestCounts.reduce((total, row) => total + row._count._all, 0);
+  const needsApproval = requestCounts.find((row) => row.status === "PENDING")?._count._all ?? 0;
+  const runningLowItems = memory ? [...memory.dueSoon, ...memory.monthlyStaples].slice(0, 2) : [];
 
   return (
     <div className="grid gap-6">
@@ -63,10 +63,10 @@ export default async function HomePage() {
         description="A shared grocery memory for the household. Capture requests, remember recurring needs, and approve carts only when everyone is ready."
       >
         <div className="grid md:grid-cols-2">
-          <SummaryCard label="Items in list" value={dashboardSummary.itemsInList} detail="2 added today" tone="lavender" icon={ListChecks} />
+          <SummaryCard label="Items in list" value={itemsInList} detail="Across grocery requests" tone="lavender" icon={ListChecks} />
           <SummaryCard
             label="Needs approval"
-            value={dashboardSummary.needsApproval}
+            value={needsApproval}
             detail="Admin review required"
             tone="peach"
             icon={AlertCircle}
@@ -80,21 +80,19 @@ export default async function HomePage() {
       </PageHeader>
 
       <section className="grid gap-3 sm:grid-cols-2">
-        <SummaryCard label="Estimated cart" value={dashboardSummary.estimatedCart} detail="Mock provider estimate" tone="paper" icon={IndianRupee} />
-        <SummaryCard label="Running low" value={dashboardSummary.runningLow} detail="Based on typical usage" tone="sage" icon={CheckCircle2} />
+        <SummaryCard label="Estimated cart" value={latestCart ? `₹${latestCart.estimatedTotal.toFixed(0)}` : "₹0"} detail="Latest mock cart estimate" tone="paper" icon={IndianRupee} />
+        <SummaryCard label="Running low" value={runningLowItems.length} detail={memory?.fallbackUsed ? "Setup examples" : "Based on household memory"} tone="sage" icon={CheckCircle2} />
       </section>
 
       <CategorySection title="Running Low" count={runningLowItems.length}>
         <div className="grid gap-3">
           {runningLowItems.map((item) => (
             <MemorySuggestionCard
-              key={item.title}
-              title={item.title}
-              detail={`${item.category} · ${item.detail}`}
+              key={item.id}
+              title={item.displayName}
+              detail={`${item.category} · ${item.reason}`}
               action={
-                <Link className="inline-flex rounded-md border border-forest/30 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-forest hover:bg-cream" href="/add">
-                  Add
-                </Link>
+                household ? <AddMemorySuggestionButton householdId={household.id} actorId={actorId} suggestion={item} /> : null
               }
             />
           ))}
