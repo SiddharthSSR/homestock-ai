@@ -26,6 +26,10 @@ const catalog: Record<string, ProductSearchResult[]> = {
   sugar: [{ productId: "mock-sugar-1kg", productName: "Sugar", brand: "Madhur", price: 58, unit: "1 kg", availabilityStatus: "AVAILABLE" }]
 };
 
+export function calculateMockLineTotal(price: number, quantity: number | null | undefined) {
+  return price * (quantity && quantity > 0 ? quantity : 1);
+}
+
 export class MockGroceryProvider implements GroceryCommerceProvider {
   async searchProducts(query: string, _context: SearchContext): Promise<ProductSearchResult[]> {
     return (
@@ -57,7 +61,7 @@ export class MockGroceryProvider implements GroceryCommerceProvider {
 
     return {
       providerCartId: `mock-cart-${Date.now()}`,
-      estimatedTotal: cartItems.reduce((total, item) => total + item.price, 0),
+      estimatedTotal: cartItems.reduce((total, item) => total + calculateMockLineTotal(item.price, item.quantity), 0),
       items: cartItems
     };
   }

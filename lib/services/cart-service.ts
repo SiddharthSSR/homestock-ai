@@ -1,7 +1,13 @@
 import { CartDraftStatus, GroceryProvider, GroceryRequestStatus } from "@prisma/client";
+import type { CartItem } from "@prisma/client";
+import { calculateMockLineTotal } from "@/lib/providers/mock-grocery-provider";
 import { getGroceryProvider } from "@/lib/providers";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "./audit-service";
+
+function calculateCartTotal(items: Pick<CartItem, "price" | "quantity">[]) {
+  return items.reduce((total, item) => total + calculateMockLineTotal(item.price, item.quantity), 0);
+}
 
 export async function prepareMockCart(householdId: string, actorId: string) {
   const household = await prisma.household.findUniqueOrThrow({ where: { id: householdId } });
@@ -12,6 +18,10 @@ export async function prepareMockCart(householdId: string, actorId: string) {
     },
     orderBy: [{ category: "asc" }, { createdAt: "asc" }]
   });
+
+  if (!approvedRequests.length) {
+    throw new Error("No approved grocery requests are available for cart preparation.");
+  }
 
   const provider = getGroceryProvider("MOCK");
   const providerDraft = await provider.prepareCart(
@@ -73,6 +83,14 @@ export async function approveCart(cartId: string, actorId: string) {
     include: { items: true }
   });
 
+  if (existing.status !== CartDraftStatus.READY_FOR_APPROVAL) {
+    throw new Error("Only cart drafts that are ready for approval can be approved.");
+  }
+
+  if (!existing.items.length) {
+    throw new Error("Cannot approve an empty cart draft.");
+  }
+
   const updated = await prisma.cartDraft.update({
     where: { id: cartId },
     data: {
@@ -94,4 +112,90 @@ export async function approveCart(cartId: string, actorId: string) {
   });
 
   return updated;
+}
+
+export async function updateCartItemQuantity(cartItemId: string, actorId: string, quantity: number | null) {
+  const existing = await prisma.cartItem.findUniqueOrThrow({
+    where: { id: cartItemId },
+    include: { cartDraft: true }
+  });
+
+  if (existing.cartDraft.status !== CartDraftStatus.READY_FOR_APPROVAL) {
+    throw new Error("Only ready cart drafts can be edited.");
+  }
+
+  const updatedCart = await prisma.$transaction(async (tx) => {
+    const updatedItem = await tx.cartItem.update({
+      where: { id: cartItemId },
+      data: { quantity },
+      include: { cartDraft: true }
+    });
+
+    const cartItems = await tx.cartItem.findMany({
+      where: { cartDraftId: existing.cartDraftId }
+    });
+
+    const cartDraft = await tx.cartDraft.update({
+      where: { id: existing.cartDraftId },
+      data: { estimatedTotal: calculateCartTotal(cartItems) },
+      include: { items: true }
+    });
+
+    return { updatedItem, cartDraft };
+  });
+
+  await writeAuditLog({
+    householdId: existing.cartDraft.householdId,
+    actorId,
+    action: "CART_ITEM_QUANTITY_UPDATED",
+    entityType: "CartItem",
+    entityId: cartItemId,
+    before: existing,
+    after: updatedCart.updatedItem
+  });
+
+  return updatedCart.cartDraft;
+}
+
+export async function removeCartItem(cartItemId: string, actorId: string) {
+  const existing = await prisma.cartItem.findUniqueOrThrow({
+    where: { id: cartItemId },
+    include: { cartDraft: { include: { items: true } } }
+  });
+
+  if (existing.cartDraft.status !== CartDraftStatus.READY_FOR_APPROVAL) {
+    throw new Error("Only ready cart drafts can be edited.");
+  }
+
+  const updatedCart = await prisma.$transaction(async (tx) => {
+    await tx.cartItem.delete({ where: { id: cartItemId } });
+    await tx.groceryRequest.update({
+      where: { id: existing.groceryRequestId },
+      data: { status: GroceryRequestStatus.APPROVED }
+    });
+
+    const remainingItems = await tx.cartItem.findMany({
+      where: { cartDraftId: existing.cartDraftId }
+    });
+
+    return tx.cartDraft.update({
+      where: { id: existing.cartDraftId },
+      data: {
+        estimatedTotal: calculateCartTotal(remainingItems)
+      },
+      include: { items: true }
+    });
+  });
+
+  await writeAuditLog({
+    householdId: existing.cartDraft.householdId,
+    actorId,
+    action: "CART_ITEM_REMOVED",
+    entityType: "CartItem",
+    entityId: cartItemId,
+    before: existing,
+    after: updatedCart
+  });
+
+  return updatedCart;
 }
