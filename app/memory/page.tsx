@@ -1,128 +1,98 @@
 import { CategorySection } from "@/components/CategorySection";
-import { EmptyState } from "@/components/EmptyState";
-import { MemorySuggestionCard } from "@/components/MemorySuggestionCard";
+import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
+import { MemorySuggestionList } from "@/components/MemorySuggestionList";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
 import { prisma } from "@/lib/prisma";
-import { getDefaultHouseholdId } from "@/lib/services/household-service";
+import { getHouseholdMemory } from "@/lib/services/memory-service";
+import { getDefaultActorId, getDefaultHouseholdId } from "@/lib/services/household-service";
 
 export const dynamic = "force-dynamic";
 
-export default async function MemoryPage() {
-  const householdId = await getDefaultHouseholdId();
-  const [recurringPatterns, staples, preferences] = await Promise.all([
-    prisma.recurringPattern.findMany({
-      where: { householdId },
-      include: { groceryItem: true },
-      orderBy: [{ confidenceScore: "desc" }, { updatedAt: "desc" }]
-    }),
-    prisma.groceryItem.findMany({
-      where: { category: "Staples" },
-      orderBy: { displayName: "asc" },
-      take: 8
-    }),
-    prisma.groceryPreference.findMany({
-      where: { householdId },
-      include: { groceryItem: true },
-      orderBy: { updatedAt: "desc" },
-      take: 6
-    })
-  ]);
-
-  const dueSoon = recurringPatterns.filter((pattern) => {
-    if (!pattern.lastOrderedAt) return false;
-    const daysSince = Math.floor((Date.now() - pattern.lastOrderedAt.getTime()) / (24 * 60 * 60 * 1000));
-    return daysSince >= Math.max(1, pattern.averageIntervalDays - 1);
-  });
+export default async function MemoryPage({ searchParams }: { searchParams: Promise<{ householdId?: string }> }) {
+  const params = await searchParams;
+  const actorId = await getDefaultActorId();
+  const households = await prisma.household.findMany({ orderBy: { createdAt: "asc" } });
+  const householdId = params.householdId ?? households[0]?.id ?? (await getDefaultHouseholdId());
+  const memory = await getHouseholdMemory(householdId);
 
   return (
     <div className="grid gap-6">
-      <PageHeader
-        eyebrow="Memory"
-        title="Household Grocery Brain"
-        meta={`${recurringPatterns.length} patterns`}
-        description="Review recurring suggestions, due-soon items, monthly staples, learned preferences, and controls for household memory."
-      />
+      <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+        <PageHeader
+          eyebrow="Memory"
+          title="Household Grocery Brain"
+          meta={`${memory.dueSoon.length + memory.monthlyStaples.length + memory.frequentItems.length} suggestions`}
+          description="Review recurring suggestions, due-soon items, monthly staples, learned preferences, and cautious household memory controls."
+        />
+        <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
+      </div>
+
+      {memory.fallbackUsed ? (
+        <section className="rounded-lg border border-cocoa/10 bg-peach/45 p-5 text-cocoa shadow-panel">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill tone="neutral">Setup mode</StatusPill>
+            <p className="font-semibold">HomeStock does not have enough household history yet.</p>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-bark">The suggestions below are starter examples, clearly marked as setup items. They are not learned claims about this household.</p>
+        </section>
+      ) : null}
 
       <section className="grid gap-3 md:grid-cols-4">
-        <SummaryCard label="Recurring" value={recurringPatterns.length} detail="Learned patterns" tone="lavender" />
-        <SummaryCard label="Due soon" value={dueSoon.length} detail="Needs review" tone="peach" />
-        <SummaryCard label="Monthly staples" value={staples.length} detail="Seed catalog" tone="sage" />
-        <SummaryCard label="Preferences" value={preferences.length} detail="Brand memory" tone="paper" />
+        <SummaryCard label="Due soon" value={memory.dueSoon.length} detail="Needs review" tone="peach" />
+        <SummaryCard label="Monthly staples" value={memory.monthlyStaples.length} detail="Likely restock items" tone="sage" />
+        <SummaryCard label="Frequent items" value={memory.frequentItems.length} detail="Repeated activity" tone="lavender" />
+        <SummaryCard label="Preferences" value={memory.learnedPreferences.length} detail="Brand or quantity memory" tone="paper" />
       </section>
 
-      <CategorySection title="Recurring suggestions" count={recurringPatterns.length}>
-        <div className="grid gap-3 md:grid-cols-2">
-          {recurringPatterns.length ? (
-            recurringPatterns.map((pattern) => (
-              <MemorySuggestionCard
-                key={pattern.id}
-                title={pattern.groceryItem.displayName}
-                detail={`Usually every ${pattern.averageIntervalDays} days${pattern.usualQuantity ? ` · ${pattern.usualQuantity} ${pattern.usualUnit ?? ""}` : ""}. Confidence ${Math.round(pattern.confidenceScore * 100)}%.`}
-              />
-            ))
-          ) : (
-            <EmptyState title="No recurring patterns yet" description="Patterns will appear after repeated approvals or orders are recorded." />
-          )}
-        </div>
+      <CategorySection title="Due Soon" count={memory.dueSoon.length}>
+        <MemorySuggestionList
+          householdId={householdId}
+          actorId={actorId}
+          suggestions={memory.dueSoon}
+          emptyTitle="Nothing due soon"
+          emptyDescription="HomeStock will surface items here when repeated grocery history indicates they may be running low."
+        />
       </CategorySection>
 
-      <CategorySection title="Due soon" count={dueSoon.length}>
-        <div className="grid gap-3 md:grid-cols-2">
-          {dueSoon.length ? (
-            dueSoon.map((pattern) => (
-              <article key={pattern.id} className="rounded-lg border border-cocoa/10 bg-peach/45 p-4 shadow-panel">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-editorial text-2xl font-semibold text-cocoa">{pattern.groceryItem.displayName}</h3>
-                    <p className="mt-2 text-sm text-bark">Due based on household usage history.</p>
-                  </div>
-                  <StatusPill tone="urgent">Due</StatusPill>
-                </div>
-              </article>
-            ))
-          ) : (
-            <EmptyState title="Nothing due soon" description="HomeStock will surface items here when usage patterns indicate they may be running low." />
-          )}
-        </div>
+      <CategorySection title="Monthly Staples" count={memory.monthlyStaples.length}>
+        <MemorySuggestionList
+          householdId={householdId}
+          actorId={actorId}
+          suggestions={memory.monthlyStaples}
+          emptyTitle="No monthly staples yet"
+          emptyDescription="Items like atta, oil, rice, or spices will appear here after enough monthly activity is visible."
+        />
       </CategorySection>
 
-      <CategorySection title="Monthly staples" count={staples.length}>
-        <div className="grid gap-3 md:grid-cols-2">
-          {staples.map((item) => (
-            <article key={item.id} className="rounded-lg border border-cocoa/10 bg-paper p-4 shadow-panel">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-bark">{item.category}</p>
-              <h3 className="mt-2 text-xl font-semibold text-cocoa">{item.displayName}</h3>
-              <p className="mt-1 text-sm text-bark">Default unit: {item.defaultUnit ?? "not set"}</p>
-            </article>
-          ))}
-        </div>
+      <CategorySection title="Frequent Items" count={memory.frequentItems.length}>
+        <MemorySuggestionList
+          householdId={householdId}
+          actorId={actorId}
+          suggestions={memory.frequentItems}
+          emptyTitle="No frequent items yet"
+          emptyDescription="Repeated grocery requests and cart activity will become frequent item suggestions."
+        />
       </CategorySection>
 
-      <CategorySection title="Learned preferences" count={preferences.length}>
-        {preferences.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {preferences.map((preference) => (
-              <article key={preference.id} className="rounded-lg border border-cocoa/10 bg-paper p-4 shadow-panel">
-                <h3 className="text-xl font-semibold text-cocoa">{preference.groceryItem.displayName}</h3>
-                <p className="mt-2 text-sm text-bark">Preferred brand: {preference.preferredBrand ?? "not learned yet"}</p>
-                <p className="mt-1 text-sm text-bark">Usual quantity: {preference.preferredQuantity ?? "not set"} {preference.preferredUnit ?? ""}</p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="No learned preferences yet" description="Brand, quantity, and substitution preferences will appear as the household uses HomeStock." />
-        )}
+      <CategorySection title="Learned Preferences" count={memory.learnedPreferences.length}>
+        <MemorySuggestionList
+          householdId={householdId}
+          actorId={actorId}
+          suggestions={memory.learnedPreferences}
+          emptyTitle="No learned preferences yet"
+          emptyDescription="Preferred brands and usual quantities will appear when the household repeats cart choices."
+        />
       </CategorySection>
 
       <section className="rounded-[1.5rem] border border-forest/15 bg-sage p-5 text-forest shadow-editorial">
         <p className="text-xs font-bold uppercase tracking-[0.24em]">Memory controls</p>
         <h2 className="font-editorial mt-2 text-3xl font-semibold">Cautious memory, admin controlled</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <MemoryControl title="Suggest reorders" detail="Enabled for recurring grocery patterns." />
+          <MemoryControl title="Suggest reorders" detail="Enabled for simple recurring grocery patterns." />
+          <MemoryControl title="Dismiss suggestions" detail="Session-only for v1. Persistent dismissal needs a later schema change." />
           <MemoryControl title="Auto-checkout" detail="Disabled. Orders always need explicit admin approval." />
-          <MemoryControl title="External providers" detail="Mock provider only until integrations are configured." />
         </div>
       </section>
     </div>
