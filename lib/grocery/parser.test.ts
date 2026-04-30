@@ -22,4 +22,9 @@ describe("parseGroceryText", () => {
       "oil"
     ]);
   });
+
+  it("strips common timing context from item names", () => {
+    expect(parseGroceryText("need 2 kg atta for today")).toMatchObject([{ name: "atta", canonicalName: "atta", quantity: 2, unit: "kg" }]);
+    expect(parseGroceryText("please add 1 litre oil for tomorrow")).toMatchObject([{ name: "oil", canonicalName: "oil", quantity: 1, unit: "litre" }]);
+  });
 });

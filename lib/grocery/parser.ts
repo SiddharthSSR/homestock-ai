@@ -88,6 +88,7 @@ function parsePart(part: string): ParsedGroceryItem | null {
   let working = part
     .replace(/\b(khatam ho raha hai|khatam ho rahi hai|khatam ho raha|khatam ho rahi)\b/g, " ")
     .replace(/\b(need|needs|please|pls|order|buy|bring|get|add|some|required|require|chahiye|chaiye)\b/g, " ")
+    .replace(/\b(for today|for tomorrow|today|tomorrow|tonight|this evening|for evening|for dinner|for lunch|for breakfast)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 

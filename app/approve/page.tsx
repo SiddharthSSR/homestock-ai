@@ -7,6 +7,7 @@ import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
+import { findDuplicateHints } from "@/lib/grocery/duplicate-hints";
 import { prisma } from "@/lib/prisma";
 import { getDefaultActorId, getDefaultHouseholdId } from "@/lib/services/household-service";
 
@@ -23,6 +24,7 @@ export default async function ApprovePage({ searchParams }: { searchParams: Prom
     orderBy: [{ urgency: "desc" }, { createdAt: "desc" }]
   });
   const urgentCount = pendingRequests.filter((request) => request.urgency === "HIGH").length;
+  const duplicateHints = findDuplicateHints(pendingRequests);
 
   return (
     <div className="grid gap-6">
@@ -52,20 +54,22 @@ export default async function ApprovePage({ searchParams }: { searchParams: Prom
         </div>
       </section>
 
-      <section className="rounded-lg border border-peachDeep/30 bg-peach/45 p-5 shadow-panel">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusPill tone="cart">Duplicate merge</StatusPill>
-              <p className="font-semibold text-cocoa">Dahi and curd look similar. Merge?</p>
+      {duplicateHints.length ? (
+        <section className="rounded-lg border border-peachDeep/30 bg-peach/45 p-5 shadow-panel">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusPill tone="cart">Duplicate merge</StatusPill>
+                <p className="font-semibold text-cocoa">{formatDuplicateNames(duplicateHints[0].names)} look similar. Merge?</p>
+              </div>
+              <p className="mt-2 text-sm text-bark">Review these synonym matches before merging household requests.</p>
             </div>
-            <p className="mt-2 text-sm text-bark">This UI reserves a safe place for merge review. Phase 1 still uses the existing duplicate merge service when compatible.</p>
+            <Link className="rounded-md border border-cocoa/20 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/grocery">
+              Review list
+            </Link>
           </div>
-          <Link className="rounded-md border border-cocoa/20 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/grocery">
-            Review list
-          </Link>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section className="grid gap-3">
         {pendingRequests.length ? (
@@ -87,7 +91,7 @@ export default async function ApprovePage({ searchParams }: { searchParams: Prom
               </div>
               {request.notes ? <p className="mt-4 rounded-md bg-cream px-3 py-2 text-sm text-bark">{request.notes}</p> : null}
               <div className="mt-4">
-                <ApprovalActions requestId={request.id} actorId={actorId} />
+                <ApprovalActions requestId={request.id} actorId={actorId} showSecondaryActions={false} />
               </div>
             </article>
           ))
@@ -97,4 +101,9 @@ export default async function ApprovePage({ searchParams }: { searchParams: Prom
       </section>
     </div>
   );
+}
+
+function formatDuplicateNames(names: string[]) {
+  const [first, second] = names;
+  return [first, second].filter(Boolean).join(" and ");
 }
