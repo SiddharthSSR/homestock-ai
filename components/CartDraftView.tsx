@@ -47,7 +47,7 @@ export function CartDraftView({ cart, actorId }: { cart: CartWithItems; actorId:
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {cart.items.map((item) => (
-          <CartItemCard key={item.id} item={item} />
+          <CartItemCard key={item.id} item={item} actorId={actorId} editable={cart.status === "READY_FOR_APPROVAL"} />
         ))}
       </div>
 

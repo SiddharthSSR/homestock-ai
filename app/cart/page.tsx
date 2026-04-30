@@ -24,6 +24,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
   });
   const latestCart = carts[0];
   const unavailableCount = latestCart?.items.filter((item) => item.availabilityStatus === "UNAVAILABLE").length ?? 0;
+  const substitutedCount = latestCart?.items.filter((item) => item.availabilityStatus === "SUBSTITUTED").length ?? 0;
 
   return (
     <div className="grid gap-6">
@@ -40,20 +41,28 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
       <section className="grid gap-3 md:grid-cols-3">
         <SummaryCard label="Approved requests" value={approvedRequestCount} detail="Can become cart items" tone="lavender" />
         <SummaryCard label="Estimated total" value={latestCart ? `₹${latestCart.estimatedTotal.toFixed(0)}` : "₹0"} detail="Mock provider estimate" tone="peach" />
-        <SummaryCard label="Unavailable" value={unavailableCount} detail="Needs admin review" tone="sage" />
+        <SummaryCard label="Review flags" value={unavailableCount + substitutedCount} detail={`${substitutedCount} substituted, ${unavailableCount} unavailable`} tone="sage" />
       </section>
 
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cocoa/10 bg-paper p-5 shadow-panel">
         <div>
           <p className="font-semibold text-cocoa">Provider status: mock mode</p>
-          <p className="mt-1 text-sm text-bark">{approvedRequestCount} approved grocery requests can be converted into a mock cart draft.</p>
+          <p className="mt-1 text-sm text-bark">
+            {approvedRequestCount
+              ? `${approvedRequestCount} approved grocery requests can be converted into a mock cart draft.`
+              : "Approve grocery requests before preparing the next mock cart draft."}
+          </p>
+          <p className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-bark">No checkout, payment, or Swiggy order is available in this flow.</p>
         </div>
         <PrepareCartButton householdId={householdId} actorId={actorId} disabled={approvedRequestCount === 0} />
       </section>
 
       <div className="grid gap-4">
-        {carts.length ? (
-          carts.map((cart) => <CartDraftView key={cart.id} cart={cart} actorId={actorId} />)
+        {latestCart ? (
+          <>
+            {carts.length > 1 ? <p className="text-sm text-bark">Showing latest cart draft. {carts.length - 1} older draft{carts.length > 2 ? "s are" : " is"} hidden from this review.</p> : null}
+            <CartDraftView cart={latestCart} actorId={actorId} />
+          </>
         ) : (
           <EmptyState title="No cart drafts yet" description="Approve grocery requests first, then prepare a mock cart for admin review." />
         )}
