@@ -11,4 +11,6 @@ HomeStock AI is a shared household grocery memory and approval assistant. The Ph
 5. Seed demo data and common synonyms: `npm run prisma:seed`.
 6. Start the app: `npm run dev`.
 
+The seed command creates deterministic QA households for empty states, starter approval flows, mock cart review, and memory-rich testing. See [docs/dev-seed-data.md](docs/dev-seed-data.md) for household names, roles, and suggested QA flows.
+
 The Swiggy Instamart integration is intentionally stubbed until official Builders Club access and tool documentation are available.
