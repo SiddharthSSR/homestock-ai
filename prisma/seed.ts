@@ -160,6 +160,9 @@ async function resetFixtureHouseholds() {
     prisma.recurringPattern.deleteMany({
       where: { householdId: { in: householdIds } }
     }),
+    prisma.memorySuggestionDismissal.deleteMany({
+      where: { householdId: { in: householdIds } }
+    }),
     prisma.auditLog.deleteMany({
       where: { householdId: { in: householdIds } }
     }),

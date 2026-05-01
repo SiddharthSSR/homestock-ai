@@ -62,6 +62,7 @@ model User {
   approvedCarts        CartDraft[]       @relation("ApprovedCarts")
   placedOrders         Order[]           @relation("PlacedOrders")
   auditLogs            AuditLog[]
+  memoryDismissals     MemorySuggestionDismissal[] @relation("MemoryDismissedBy")
 }
 
 model Household {
@@ -79,6 +80,7 @@ model Household {
   orders             Order[]
   recurringPatterns  RecurringPattern[]
   auditLogs          AuditLog[]
+  memoryDismissals   MemorySuggestionDismissal[]
 }
 
 model HouseholdMember {
@@ -248,6 +250,28 @@ model RecurringPattern {
   groceryItem         GroceryItem @relation(fields: [groceryItemId], references: [id], onDelete: Cascade)
 
   @@unique([householdId, groceryItemId])
+}
+
+model MemorySuggestionDismissal {
+  id             String    @id @default(cuid())
+  householdId    String
+  suggestionKey  String
+  canonicalName  String
+  displayName    String
+  suggestionType String
+  source         String
+  dismissedBy    String?
+  dismissedAt    DateTime  @default(now())
+  expiresAt      DateTime?
+  reason         String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  household      Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  actor          User?     @relation("MemoryDismissedBy", fields: [dismissedBy], references: [id], onDelete: SetNull)
+
+  @@unique([householdId, suggestionKey])
+  @@index([householdId, canonicalName])
+  @@index([householdId, expiresAt])
 }
 
 model AuditLog {
