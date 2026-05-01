@@ -11,7 +11,7 @@ type GroceryRequestWithRequester = GroceryRequest & {
 
 const primaryCategories = ["Vegetables", "Dairy", "Staples", "Cooking", "Household"];
 
-export function GroceryGroupedList({ requests, actorId }: { requests: GroceryRequestWithRequester[]; actorId: string }) {
+export function GroceryGroupedList({ requests, actorId, canUseAdminActions = true }: { requests: GroceryRequestWithRequester[]; actorId: string; canUseAdminActions?: boolean }) {
   const grouped = requests.reduce<Record<string, GroceryRequest[]>>((acc, request) => {
     const category = request.category === "Other" ? "Household" : request.category;
     acc[category] = acc[category] ?? [];
@@ -34,7 +34,7 @@ export function GroceryGroupedList({ requests, actorId }: { requests: GroceryReq
           {categoryRequests.length ? (
             <div className="grid gap-3 md:grid-cols-2">
               {categoryRequests.map((request) => (
-                <GroceryItemCard key={request.id} request={request} actorId={actorId} />
+                <GroceryItemCard key={request.id} request={request} actorId={actorId} canUseAdminActions={canUseAdminActions} />
               ))}
             </div>
           ) : (

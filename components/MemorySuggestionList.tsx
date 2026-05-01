@@ -12,12 +12,14 @@ export function MemorySuggestionList({
   householdId,
   actorId,
   suggestions,
+  canAddSuggestions = true,
   emptyTitle,
   emptyDescription
 }: {
   householdId: string;
   actorId: string;
   suggestions: MemorySuggestion[];
+  canAddSuggestions?: boolean;
   emptyTitle: string;
   emptyDescription: string;
 }) {
@@ -46,7 +48,7 @@ export function MemorySuggestionList({
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
-                <AddMemorySuggestionButton householdId={householdId} actorId={actorId} suggestion={suggestion} />
+                {canAddSuggestions ? <AddMemorySuggestionButton householdId={householdId} actorId={actorId} suggestion={suggestion} /> : <p className="text-sm font-semibold text-bark">Only household admins and members can add memory suggestions.</p>}
                 <button
                   type="button"
                   className="inline-flex items-center justify-center gap-2 rounded-md border border-cocoa/15 bg-paper/60 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream"

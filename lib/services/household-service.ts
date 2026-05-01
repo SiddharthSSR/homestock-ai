@@ -35,3 +35,31 @@ export async function getDefaultHouseholdId() {
 
   return created.id;
 }
+
+export async function resolveCurrentActorId(householdId: string, actorId?: string) {
+  if (actorId) {
+    const membership = await prisma.householdMember.findUnique({
+      where: {
+        householdId_userId: {
+          householdId,
+          userId: actorId
+        }
+      }
+    });
+    if (membership) return actorId;
+  }
+
+  const admin = await prisma.householdMember.findFirst({
+    where: { householdId, role: "ADMIN" },
+    orderBy: { createdAt: "asc" }
+  });
+  if (admin) return admin.userId;
+
+  const member = await prisma.householdMember.findFirst({
+    where: { householdId },
+    orderBy: { createdAt: "asc" }
+  });
+  if (member) return member.userId;
+
+  return getDefaultActorId();
+}

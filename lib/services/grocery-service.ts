@@ -3,6 +3,7 @@ import { parseGroceryText } from "@/lib/grocery/parser";
 import { normalizeGroceryName } from "@/lib/grocery/synonyms";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "./audit-service";
+import { assertHouseholdPermission } from "./permissions-service";
 
 type AddRequestInput = {
   householdId: string;
@@ -13,6 +14,8 @@ type AddRequestInput = {
 };
 
 export async function addGroceryRequests(input: AddRequestInput) {
+  await assertHouseholdPermission(input.householdId, input.requestedBy, "grocery:add");
+
   const parsedItems = parseGroceryText(input.rawText);
   const results = [];
 
@@ -91,6 +94,8 @@ export async function updateGroceryRequest(requestId: string, actorId: string, u
   notes?: string | null;
 }) {
   const existing = await prisma.groceryRequest.findUniqueOrThrow({ where: { id: requestId } });
+  await assertHouseholdPermission(existing.householdId, actorId, "grocery:edit");
+
   const normalized = updates.displayName ? normalizeGroceryName(updates.displayName) : null;
   const updated = await prisma.groceryRequest.update({
     where: { id: requestId },
@@ -120,6 +125,8 @@ export async function updateGroceryRequest(requestId: string, actorId: string, u
 
 export async function transitionGroceryRequest(requestId: string, actorId: string, status: GroceryRequestStatus, action: string) {
   const existing = await prisma.groceryRequest.findUniqueOrThrow({ where: { id: requestId } });
+  await assertHouseholdPermission(existing.householdId, actorId, status === GroceryRequestStatus.PURCHASED_OFFLINE ? "grocery:edit" : "grocery:approve");
+
   const updated = await prisma.groceryRequest.update({
     where: { id: requestId },
     data: { status }

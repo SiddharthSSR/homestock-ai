@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { CheckCircle2, Home, ListChecks, MoreHorizontal, Plus } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { PreservedQueryLink } from "./PreservedQueryLink";
 
 const items = [
   { href: "/", label: "Home", icon: Home, matches: ["/"] },
@@ -22,7 +22,7 @@ export function BottomNav() {
           const Icon = item.icon;
           const active = item.matches.some((match) => (match === "/" ? pathname === "/" : pathname.startsWith(match)));
           return (
-            <Link
+            <PreservedQueryLink
               key={`${item.href}-${item.label}`}
               href={item.href}
               className="relative grid justify-items-center gap-1 rounded-md px-1 py-2 text-[0.62rem] font-bold uppercase tracking-[0.16em] text-bark"
@@ -30,7 +30,7 @@ export function BottomNav() {
               {active ? <span className="absolute -top-2 h-2 w-2 rounded-full bg-peachDeep" /> : null}
               <Icon className={`h-5 w-5 ${active ? "text-forest" : "text-bark"}`} />
               <span>{item.label}</span>
-            </Link>
+            </PreservedQueryLink>
           );
         })}
       </div>

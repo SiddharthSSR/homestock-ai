@@ -8,7 +8,7 @@ type CartWithItems = CartDraft & {
   items: CartItem[];
 };
 
-export function CartDraftView({ cart, actorId }: { cart: CartWithItems; actorId: string }) {
+export function CartDraftView({ cart, actorId, canEditCart = true, canApproveCart = true }: { cart: CartWithItems; actorId: string; canEditCart?: boolean; canApproveCart?: boolean }) {
   const substitutedItems = cart.items.filter((item) => item.availabilityStatus === "SUBSTITUTED");
   const unavailableItems = cart.items.filter((item) => item.availabilityStatus === "UNAVAILABLE");
 
@@ -47,7 +47,7 @@ export function CartDraftView({ cart, actorId }: { cart: CartWithItems; actorId:
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {cart.items.map((item) => (
-          <CartItemCard key={item.id} item={item} actorId={actorId} editable={cart.status === "READY_FOR_APPROVAL"} />
+          <CartItemCard key={item.id} item={item} actorId={actorId} editable={canEditCart && cart.status === "READY_FOR_APPROVAL"} />
         ))}
       </div>
 
@@ -60,7 +60,11 @@ export function CartDraftView({ cart, actorId }: { cart: CartWithItems; actorId:
               <p className="mt-2 text-sm leading-6 text-forest/80">Approving this cart only marks the draft approved in HomeStock AI. It does not place a real order in mock mode.</p>
             </div>
           </div>
-          <CartApprovalPanel cartId={cart.id} actorId={actorId} disabled={cart.status === "APPROVED"} />
+          {canApproveCart ? (
+            <CartApprovalPanel cartId={cart.id} actorId={actorId} disabled={cart.status === "APPROVED"} />
+          ) : (
+            <p className="max-w-sm text-sm font-semibold text-forest/80">Only household admins can approve cart drafts.</p>
+          )}
         </div>
       </div>
 

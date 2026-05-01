@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { removeCartItem, updateCartItemQuantity } from "@/lib/services/cart-service";
 import { getDefaultActorId } from "@/lib/services/household-service";
+import { PermissionError } from "@/lib/services/permissions-service";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ cartItemId: string }> }) {
   try {
@@ -16,7 +17,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ca
     const item = await updateCartItemQuantity(cartItemId, actorId, quantity);
     return NextResponse.json({ item });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not update cart item." }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not update cart item." }, { status: error instanceof PermissionError ? 403 : 400 });
   }
 }
 
@@ -28,6 +29,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
     const cart = await removeCartItem(cartItemId, actorId);
     return NextResponse.json({ cart });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not remove cart item." }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not remove cart item." }, { status: error instanceof PermissionError ? 403 : 400 });
   }
 }
