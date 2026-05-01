@@ -67,6 +67,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
           actorId={actorId}
           suggestions={memory.dueSoon}
           canAddSuggestions={permissions.canAddMemorySuggestion}
+          canDismissSuggestions={permissions.canDismissMemorySuggestion}
           emptyTitle="Nothing due soon"
           emptyDescription="HomeStock will surface items here when repeated grocery history indicates they may be running low."
         />
@@ -78,6 +79,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
           actorId={actorId}
           suggestions={memory.monthlyStaples}
           canAddSuggestions={permissions.canAddMemorySuggestion}
+          canDismissSuggestions={permissions.canDismissMemorySuggestion}
           emptyTitle="No monthly staples yet"
           emptyDescription="Items like atta, oil, rice, or spices will appear here after enough monthly activity is visible."
         />
@@ -89,6 +91,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
           actorId={actorId}
           suggestions={memory.frequentItems}
           canAddSuggestions={permissions.canAddMemorySuggestion}
+          canDismissSuggestions={permissions.canDismissMemorySuggestion}
           emptyTitle="No frequent items yet"
           emptyDescription="Repeated grocery requests and cart activity will become frequent item suggestions."
         />
@@ -100,6 +103,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
           actorId={actorId}
           suggestions={memory.learnedPreferences}
           canAddSuggestions={permissions.canAddMemorySuggestion}
+          canDismissSuggestions={permissions.canDismissMemorySuggestion}
           emptyTitle="No learned preferences yet"
           emptyDescription="Preferred brands and usual quantities will appear when the household repeats cart choices."
         />

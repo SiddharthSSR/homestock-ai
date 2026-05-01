@@ -14,6 +14,7 @@ export function MemorySuggestionList({
   actorId,
   suggestions,
   canAddSuggestions = true,
+  canDismissSuggestions = true,
   emptyTitle,
   emptyDescription
 }: {
@@ -21,6 +22,7 @@ export function MemorySuggestionList({
   actorId: string;
   suggestions: MemorySuggestion[];
   canAddSuggestions?: boolean;
+  canDismissSuggestions?: boolean;
   emptyTitle: string;
   emptyDescription: string;
 }) {
@@ -50,7 +52,11 @@ export function MemorySuggestionList({
               </div>
               <div className="flex flex-wrap gap-2">
                 {canAddSuggestions ? <AddMemorySuggestionButton householdId={householdId} actorId={actorId} suggestion={suggestion} /> : <p className="text-sm font-semibold text-bark">Only household admins and members can add memory suggestions.</p>}
-                <DismissMemorySuggestionButton householdId={householdId} actorId={actorId} suggestion={suggestion} onDismissed={(suggestionId) => setDismissed((current) => [...current, suggestionId])} />
+                {canDismissSuggestions ? (
+                  <DismissMemorySuggestionButton householdId={householdId} actorId={actorId} suggestion={suggestion} onDismissed={(suggestionId) => setDismissed((current) => [...current, suggestionId])} />
+                ) : (
+                  <p className="text-sm font-semibold text-bark">Only household admins and members can dismiss suggestions.</p>
+                )}
                 <button
                   type="button"
                   disabled
