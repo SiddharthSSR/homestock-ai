@@ -1,7 +1,8 @@
-import type { GroceryItem, GroceryPreference, RecurringPattern } from "@prisma/client";
+import type { GroceryItem, GroceryPreference, MemorySuggestionDismissal, RecurringPattern } from "@prisma/client";
 import { GroceryRequestStatus } from "@prisma/client";
 import { groceryCatalogSeeds } from "../grocery/synonyms";
 import { prisma } from "../prisma";
+import { assertHouseholdPermission } from "./permissions-service";
 
 export type MemorySuggestionType = "DUE_SOON" | "MONTHLY_STAPLE" | "FREQUENT_ITEM" | "PREFERENCE";
 export type MemorySuggestionSource = "learned" | "saved-pattern" | "setup";
@@ -30,6 +31,24 @@ export type HouseholdMemory = {
   fallbackUsed: boolean;
   generatedAt: Date;
 };
+
+export type MemoryDismissalInput = {
+  householdId: string;
+  actorId: string;
+  suggestionKey: string;
+  canonicalName: string;
+  displayName: string;
+  suggestionType: MemorySuggestionType;
+  source: MemorySuggestionSource;
+  reason?: string | null;
+  dismissDays?: number | null;
+  now?: Date;
+};
+
+export type MemoryDismissalRecord = Pick<
+  MemorySuggestionDismissal,
+  "id" | "householdId" | "suggestionKey" | "canonicalName" | "displayName" | "suggestionType" | "source" | "dismissedBy" | "dismissedAt" | "expiresAt" | "reason" | "createdAt" | "updatedAt"
+>;
 
 export type MemoryHistoryEvent = {
   canonicalName: string;
@@ -60,7 +79,7 @@ const monthlyCategories = new Set(["Staples", "Cooking", "Spices"]);
 const setupSuggestionNames = ["milk", "eggs", "atta", "oil"];
 
 export async function getHouseholdMemory(householdId: string, now = new Date()): Promise<HouseholdMemory> {
-  const [requests, patterns, preferences] = await Promise.all([
+  const [requests, patterns, preferences, dismissals] = await Promise.all([
     prisma.groceryRequest.findMany({
       where: {
         householdId,
@@ -85,7 +104,8 @@ export async function getHouseholdMemory(householdId: string, now = new Date()):
       where: { householdId },
       include: { groceryItem: true },
       orderBy: { updatedAt: "desc" }
-    })
+    }),
+    getActiveMemoryDismissals(householdId, now)
   ]);
 
   const events: MemoryHistoryEvent[] = requests.flatMap((request) => {
@@ -114,7 +134,71 @@ export async function getHouseholdMemory(householdId: string, now = new Date()):
     ];
   });
 
-  return generateHouseholdMemory({ events, patterns, preferences, now });
+  return filterDismissedMemory(generateHouseholdMemory({ events, patterns, preferences, now }), dismissals, now);
+}
+
+export async function getActiveMemoryDismissals(householdId: string, now = new Date()) {
+  return prisma.memorySuggestionDismissal.findMany({
+    where: {
+      householdId,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
+    },
+    orderBy: { dismissedAt: "desc" }
+  });
+}
+
+export async function dismissMemorySuggestion(input: MemoryDismissalInput) {
+  await assertHouseholdPermission(input.householdId, input.actorId, "memory:dismiss-suggestion");
+
+  const now = input.now ?? new Date();
+  const dismissDays = input.dismissDays === null || input.dismissDays === undefined ? 7 : input.dismissDays;
+  const expiresAt = dismissDays > 0 ? new Date(now.getTime() + dismissDays * dayMs) : null;
+
+  return prisma.memorySuggestionDismissal.upsert({
+    where: {
+      householdId_suggestionKey: {
+        householdId: input.householdId,
+        suggestionKey: input.suggestionKey
+      }
+    },
+    update: {
+      canonicalName: input.canonicalName,
+      displayName: input.displayName,
+      suggestionType: input.suggestionType,
+      source: input.source,
+      dismissedBy: input.actorId,
+      dismissedAt: now,
+      expiresAt,
+      reason: input.reason ?? null
+    },
+    create: {
+      householdId: input.householdId,
+      suggestionKey: input.suggestionKey,
+      canonicalName: input.canonicalName,
+      displayName: input.displayName,
+      suggestionType: input.suggestionType,
+      source: input.source,
+      dismissedBy: input.actorId,
+      dismissedAt: now,
+      expiresAt,
+      reason: input.reason ?? null
+    }
+  });
+}
+
+export async function restoreMemorySuggestionDismissal(householdId: string, dismissalId: string, actorId: string) {
+  await assertHouseholdPermission(householdId, actorId, "memory:dismiss-suggestion");
+
+  const dismissal = await prisma.memorySuggestionDismissal.findFirst({
+    where: { id: dismissalId, householdId }
+  });
+
+  if (!dismissal) {
+    throw new Error("Memory dismissal was not found.");
+  }
+
+  await prisma.memorySuggestionDismissal.delete({ where: { id: dismissalId } });
+  return dismissal;
 }
 
 export function generateHouseholdMemory({
@@ -251,6 +335,29 @@ export function generateHouseholdMemory({
     fallbackUsed,
     generatedAt: now
   };
+}
+
+export function filterDismissedMemory(memory: HouseholdMemory, dismissals: MemoryDismissalRecord[], now = new Date()): HouseholdMemory {
+  return {
+    ...memory,
+    dueSoon: memory.dueSoon.filter((suggestion) => !isMemorySuggestionDismissed(suggestion, dismissals, now)),
+    monthlyStaples: memory.monthlyStaples.filter((suggestion) => !isMemorySuggestionDismissed(suggestion, dismissals, now)),
+    frequentItems: memory.frequentItems.filter((suggestion) => !isMemorySuggestionDismissed(suggestion, dismissals, now)),
+    learnedPreferences: memory.learnedPreferences.filter((suggestion) => !isMemorySuggestionDismissed(suggestion, dismissals, now))
+  };
+}
+
+export function isMemorySuggestionDismissed(suggestion: MemorySuggestion, dismissals: MemoryDismissalRecord[], now = new Date()) {
+  return dismissals.some((dismissal) => {
+    if (dismissal.expiresAt && dismissal.expiresAt <= now) return false;
+    if (dismissal.suggestionKey === suggestion.id) return true;
+
+    return (
+      dismissal.canonicalName === suggestion.canonicalName &&
+      dismissal.suggestionType === suggestion.type &&
+      dismissal.source === suggestion.source
+    );
+  });
 }
 
 function suggestionFromPattern(pattern: RecurringPatternInput, now: Date): MemorySuggestion | null {

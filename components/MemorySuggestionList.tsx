@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import type { MemorySuggestion } from "@/lib/services/memory-service";
 import { AddMemorySuggestionButton } from "./AddMemorySuggestionButton";
+import { DismissMemorySuggestionButton } from "./DismissMemorySuggestionButton";
 import { EmptyState } from "./EmptyState";
 import { MemorySuggestionCard } from "./MemorySuggestionCard";
 import { StatusPill } from "./StatusPill";
@@ -49,14 +50,7 @@ export function MemorySuggestionList({
               </div>
               <div className="flex flex-wrap gap-2">
                 {canAddSuggestions ? <AddMemorySuggestionButton householdId={householdId} actorId={actorId} suggestion={suggestion} /> : <p className="text-sm font-semibold text-bark">Only household admins and members can add memory suggestions.</p>}
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-md border border-cocoa/15 bg-paper/60 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream"
-                  onClick={() => setDismissed((current) => [...current, suggestion.id])}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Dismiss
-                </button>
+                <DismissMemorySuggestionButton householdId={householdId} actorId={actorId} suggestion={suggestion} onDismissed={(suggestionId) => setDismissed((current) => [...current, suggestionId])} />
                 <button
                   type="button"
                   disabled

@@ -13,6 +13,7 @@ describe("canRole", () => {
   it("allows members to add grocery and memory suggestions only", () => {
     expect(canRole("MEMBER", "grocery:add")).toBe(true);
     expect(canRole("MEMBER", "memory:add-suggestion")).toBe(true);
+    expect(canRole("MEMBER", "memory:dismiss-suggestion")).toBe(true);
     expect(canRole("MEMBER", "grocery:approve")).toBe(false);
     expect(canRole("MEMBER", "cart:prepare")).toBe(false);
     expect(canRole("MEMBER", "cart:approve")).toBe(false);
@@ -22,6 +23,7 @@ describe("canRole", () => {
   it("allows cooks to add grocery requests only", () => {
     expect(canRole("COOK", "grocery:add")).toBe(true);
     expect(canRole("COOK", "memory:add-suggestion")).toBe(false);
+    expect(canRole("COOK", "memory:dismiss-suggestion")).toBe(false);
     expect(canRole("COOK", "grocery:approve")).toBe(false);
     expect(canRole("COOK", "cart:prepare")).toBe(false);
     expect(canRole("COOK", "cart:edit")).toBe(false);

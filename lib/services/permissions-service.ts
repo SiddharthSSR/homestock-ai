@@ -9,6 +9,7 @@ export type HouseholdPermission =
   | "cart:edit"
   | "cart:approve"
   | "memory:add-suggestion"
+  | "memory:dismiss-suggestion"
   | "household:manage";
 
 export class PermissionError extends Error {
@@ -25,7 +26,7 @@ export function canRole(role: HouseholdRole | null | undefined, permission: Hous
   if (role === "ADMIN") return true;
 
   if (role === "MEMBER") {
-    return permission === "grocery:add" || permission === "memory:add-suggestion";
+    return permission === "grocery:add" || permission === "memory:add-suggestion" || permission === "memory:dismiss-suggestion";
   }
 
   if (role === "COOK") {
@@ -68,6 +69,7 @@ export function roleCapabilities(role: HouseholdRole | null | undefined) {
     canEditCart: canRole(role, "cart:edit"),
     canApproveCart: canRole(role, "cart:approve"),
     canAddMemorySuggestion: canRole(role, "memory:add-suggestion"),
+    canDismissMemorySuggestion: canRole(role, "memory:dismiss-suggestion"),
     canManageHousehold: canRole(role, "household:manage")
   };
 }
@@ -78,5 +80,6 @@ function messageFor(permission: HouseholdPermission) {
   if (permission === "grocery:edit") return "Only household admins can edit grocery request status or quantities.";
   if (permission === "household:manage") return "Only household admins can manage household settings.";
   if (permission === "memory:add-suggestion") return "Only household admins and members can add memory suggestions.";
+  if (permission === "memory:dismiss-suggestion") return "Only household admins and members can dismiss memory suggestions.";
   return "Only household members can add grocery requests.";
 }
