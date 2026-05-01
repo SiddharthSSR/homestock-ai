@@ -23,6 +23,15 @@ describe("parseGroceryText", () => {
     ]);
   });
 
+  it("parses cook helper Hinglish notes", () => {
+    expect(parseGroceryText("Aata, tamatar, pyaaz, tel, dhaniya chahiye").map((item) => item.canonicalName)).toEqual(["atta", "tomato", "onion", "oil", "coriander"]);
+    expect(parseGroceryText("Doodh 2 litre, dahi, aloo 1 kg")).toMatchObject([
+      { canonicalName: "milk", quantity: 2, unit: "litre" },
+      { canonicalName: "curd", quantity: null },
+      { canonicalName: "potato", quantity: 1, unit: "kg" }
+    ]);
+  });
+
   it("strips common timing context from item names", () => {
     expect(parseGroceryText("need 2 kg atta for today")).toMatchObject([{ name: "atta", canonicalName: "atta", quantity: 2, unit: "kg" }]);
     expect(parseGroceryText("please add 1 litre oil for tomorrow")).toMatchObject([{ name: "oil", canonicalName: "oil", quantity: 1, unit: "litre" }]);
