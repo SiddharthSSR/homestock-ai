@@ -3,6 +3,7 @@ import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
+import { resolveSelectedHousehold } from "@/lib/household-selection";
 import { prisma } from "@/lib/prisma";
 import { getDefaultHouseholdId, resolveCurrentActorId } from "@/lib/services/household-service";
 import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-service";
@@ -24,7 +25,8 @@ export default async function HouseholdPage({ searchParams }: { searchParams: Pr
     },
     orderBy: { createdAt: "asc" }
   });
-  const householdId = params.householdId ?? households[0]?.id ?? (await getDefaultHouseholdId());
+  const selectedHousehold = resolveSelectedHousehold(households, params.householdId);
+  const householdId = selectedHousehold?.id ?? (await getDefaultHouseholdId());
   const actorId = await resolveCurrentActorId(householdId, params.actorId);
   const [members, role] = await Promise.all([
     prisma.householdMember.findMany({
@@ -36,7 +38,7 @@ export default async function HouseholdPage({ searchParams }: { searchParams: Pr
   ]);
   const permissions = roleCapabilities(role);
   const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
-  const activeHousehold = households.find((household) => household.id === householdId) ?? households[0];
+  const activeHousehold = selectedHousehold ?? households.find((household) => household.id === householdId) ?? households[0];
   const adminCount = activeHousehold?.members.filter((member) => member.role === "ADMIN").length ?? 0;
   const cookCount = activeHousehold?.members.filter((member) => member.role === "COOK").length ?? 0;
 
@@ -84,24 +86,28 @@ export default async function HouseholdPage({ searchParams }: { searchParams: Pr
                 <h2 className="font-editorial mt-2 text-4xl font-semibold text-cocoa">{household.name}</h2>
                 <p className="mt-1 text-sm text-bark">{household.location ?? "No location set"}</p>
               </div>
-              {permissions.canManageHousehold ? (
-              <form action={`/api/households/${household.id}/members`} method="post" className="flex flex-wrap gap-2">
-                <input type="hidden" name="actorId" value={actorId} />
-                <select name="userId" aria-label="Household member" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name}
-                    </option>
-                  ))}
-                </select>
-                <select name="role" aria-label="Household role" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
-                  <option value="ADMIN">Admin</option>
-                  <option value="MEMBER">Member</option>
-                  <option value="COOK">Cook</option>
-                </select>
-                <button className="rounded-md border border-cocoa/20 bg-cream px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cocoa">Add member</button>
-              </form>
-              ) : null}
+              {permissions.canManageHousehold && household.id === householdId ? (
+                <form action={`/api/households/${household.id}/members`} method="post" className="flex flex-wrap gap-2">
+                  <input type="hidden" name="actorId" value={actorId} />
+                  <select name="userId" aria-label="Household member" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select name="role" aria-label="Household role" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
+                    <option value="ADMIN">Admin</option>
+                    <option value="MEMBER">Member</option>
+                    <option value="COOK">Cook</option>
+                  </select>
+                  <button className="rounded-md border border-cocoa/20 bg-cream px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cocoa">Add member</button>
+                </form>
+              ) : household.id === householdId ? (
+                <p className="max-w-sm text-sm font-semibold text-bark">Only household admins can manage members for this household.</p>
+              ) : (
+                <p className="max-w-sm text-sm text-bark">Select this household to manage its members.</p>
+              )}
             </div>
 
             <div className="mt-5 grid gap-3 md:grid-cols-3">

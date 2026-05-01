@@ -8,9 +8,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { PreservedQueryLink } from "@/components/PreservedQueryLink";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
+import { resolveSelectedHousehold } from "@/lib/household-selection";
 import { prisma } from "@/lib/prisma";
 import { getHouseholdMemory } from "@/lib/services/memory-service";
-import { resolveCurrentActorId } from "@/lib/services/household-service";
+import { getDefaultHouseholdId, resolveCurrentActorId } from "@/lib/services/household-service";
 import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-service";
 
 export const dynamic = "force-dynamic";
@@ -33,9 +34,12 @@ const recentActivity = [
   }
 ];
 
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ actorId?: string }> }) {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ householdId?: string; actorId?: string }> }) {
   const params = await searchParams;
-  const household = await prisma.household.findFirst({ orderBy: { createdAt: "asc" } });
+  const households = await prisma.household.findMany({ orderBy: { createdAt: "asc" } });
+  const selectedHousehold = resolveSelectedHousehold(households, params.householdId);
+  const fallbackHousehold = selectedHousehold ? null : await prisma.household.findUnique({ where: { id: await getDefaultHouseholdId() } });
+  const household = selectedHousehold ?? fallbackHousehold;
   const actorId = household ? await resolveCurrentActorId(household.id, params.actorId) : "";
   const [members, role] = household
     ? await Promise.all([
@@ -85,7 +89,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             tone="peach"
             icon={AlertCircle}
             action={
-              <PreservedQueryLink className="inline-flex rounded-md bg-peachDeep px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" href="/approve">
+              <PreservedQueryLink className="inline-flex rounded-md bg-peachDeep px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" href={household ? `/approve?householdId=${household.id}&actorId=${actorId}` : "/approve"}>
                 Review
               </PreservedQueryLink>
             }
