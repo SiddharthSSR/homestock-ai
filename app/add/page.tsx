@@ -1,7 +1,9 @@
 import { AddGroceryRequestForm } from "@/components/AddGroceryRequestForm";
+import { CookHelperRequestForm } from "@/components/CookHelperRequestForm";
 import { CurrentActorSwitcher } from "@/components/CurrentActorSwitcher";
 import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
 import { PageHeader } from "@/components/PageHeader";
+import { getAddRequestExperience } from "@/lib/cook-helper-mode";
 import { prisma } from "@/lib/prisma";
 import { getDefaultHouseholdId, resolveCurrentActorId } from "@/lib/services/household-service";
 import { getHouseholdRole } from "@/lib/services/permissions-service";
@@ -21,6 +23,7 @@ export default async function AddRequestPage({ searchParams }: { searchParams: P
     }),
     getHouseholdRole(householdId, actorId)
   ]);
+  const addExperience = getAddRequestExperience(actorRole);
   const cookMember = await prisma.householdMember.findFirst({
     where: { householdId, role: "COOK" },
     select: { userId: true }
@@ -39,15 +42,33 @@ export default async function AddRequestPage({ searchParams }: { searchParams: P
     },
     orderBy: { createdAt: "desc" }
   });
+  const submittedRequests =
+    addExperience === "cook-helper"
+      ? await prisma.groceryRequest.findMany({
+          where: { householdId, requestedBy: actorId },
+          select: {
+            id: true,
+            displayName: true,
+            status: true,
+            createdAt: true
+          },
+          orderBy: { createdAt: "desc" },
+          take: 6
+        })
+      : [];
 
   return (
     <div className="grid gap-6">
       <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
         <PageHeader
           eyebrow="Add request"
-          title="Tell the household what is needed"
+          title={addExperience === "cook-helper" ? "Cook Helper" : "Tell the household what is needed"}
           meta="Cook friendly"
-          description="Write a simple grocery note. HomeStock parses it, highlights likely duplicates, and adds requests to the approval list."
+          description={
+            addExperience === "cook-helper"
+              ? "Add groceries quickly in simple language. HomeStock organizes the request and sends it for household approval."
+              : "Write a simple grocery note. HomeStock parses it, highlights likely duplicates, and adds requests to the approval list."
+          }
         />
         <div className="grid gap-3">
           <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
@@ -55,7 +76,25 @@ export default async function AddRequestPage({ searchParams }: { searchParams: P
         </div>
       </div>
 
-      <AddGroceryRequestForm householdId={householdId} actorId={actorId} actorRole={actorRole ?? "MEMBER"} cookActorId={cookMember?.userId} existingRequests={existingRequests} />
+      {addExperience === "cook-helper" ? (
+        <CookHelperRequestForm
+          householdId={householdId}
+          actorId={actorId}
+          existingRequests={existingRequests}
+          submittedRequests={submittedRequests.map((request) => ({
+            id: request.id,
+            displayName: request.displayName,
+            status: request.status,
+            createdAtLabel: formatSubmittedAt(request.createdAt)
+          }))}
+        />
+      ) : (
+        <AddGroceryRequestForm householdId={householdId} actorId={actorId} actorRole={actorRole ?? "MEMBER"} cookActorId={cookMember?.userId} existingRequests={existingRequests} />
+      )}
     </div>
   );
+}
+
+function formatSubmittedAt(value: Date) {
+  return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(value);
 }
