@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { ParsedGroceryItem, parseGroceryText } from "@/lib/grocery/parser";
 import { serializeGroceryItems } from "@/lib/grocery/serialize";
 import { normalizeGroceryName } from "@/lib/grocery/synonyms";
+import { hrefWithPreservedParams } from "@/lib/navigation";
 import { ParsedItemsPreview } from "./ParsedItemsPreview";
 import { StatusPill } from "./StatusPill";
 
@@ -25,11 +26,13 @@ const defaultPrompt = "Need 2 kg atta, 1 litre oil, tomatoes and coriander";
 export function AddGroceryRequestForm({
   householdId,
   actorId,
+  actorRole,
   cookActorId,
   existingRequests
 }: {
   householdId: string;
   actorId: string;
+  actorRole: "ADMIN" | "MEMBER" | "COOK";
   cookActorId?: string;
   existingRequests: ExistingRequest[];
 }) {
@@ -37,7 +40,7 @@ export function AddGroceryRequestForm({
   const [urgency, setUrgency] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
   const [notes, setNotes] = useState("");
   const [requestActorId, setRequestActorId] = useState(actorId);
-  const [cookMode, setCookMode] = useState(false);
+  const [cookMode, setCookMode] = useState(actorRole === "COOK");
   const [items, setItems] = useState<EditableParsedItem[]>([]);
   const [parseAttempted, setParseAttempted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -115,7 +118,7 @@ export function AddGroceryRequestForm({
         throw new Error("Could not save grocery requests.");
       }
 
-      window.location.href = `/grocery?householdId=${householdId}`;
+      window.location.href = hrefWithPreservedParams("/grocery", { householdId, actorId });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not save grocery requests.");
       setIsSaving(false);
@@ -123,7 +126,7 @@ export function AddGroceryRequestForm({
   }
 
   function applyChip(chip: string) {
-    if (chip === "From cook" && cookActorId) {
+    if (chip === "From cook" && cookActorId && actorRole === "ADMIN") {
       setRequestActorId(cookActorId);
       setCookMode(true);
     }
@@ -150,7 +153,7 @@ export function AddGroceryRequestForm({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {["From cook", "Urgent", "For today", "Monthly stock"].map((chip) => (
+        {(actorRole === "ADMIN" ? ["From cook", "Urgent", "For today", "Monthly stock"] : ["Urgent", "For today", "Monthly stock"]).map((chip) => (
           <button
             type="button"
             key={chip}
@@ -170,12 +173,14 @@ export function AddGroceryRequestForm({
             checked={cookMode}
             onChange={(event) => {
               setCookMode(event.target.checked);
-              setRequestActorId(event.target.checked && cookActorId ? cookActorId : actorId);
+              setRequestActorId(event.target.checked && cookActorId && actorRole === "ADMIN" ? cookActorId : actorId);
             }}
           />
           <span>
             <span className="block font-semibold">Cook/helper mode</span>
-            <span className="text-sm text-forest/75">Keeps the input simple and treats the note as a household request for admin review.</span>
+            <span className="text-sm text-forest/75">
+              {actorRole === "COOK" ? "Simple helper mode is active for cook requests." : "Keeps the input simple and treats the note as a household request for admin review."}
+            </span>
           </span>
         </label>
       </div>

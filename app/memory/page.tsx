@@ -1,4 +1,5 @@
 import { CategorySection } from "@/components/CategorySection";
+import { CurrentActorSwitcher } from "@/components/CurrentActorSwitcher";
 import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
 import { MemorySuggestionList } from "@/components/MemorySuggestionList";
 import { PageHeader } from "@/components/PageHeader";
@@ -6,15 +7,25 @@ import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
 import { prisma } from "@/lib/prisma";
 import { getHouseholdMemory } from "@/lib/services/memory-service";
-import { getDefaultActorId, getDefaultHouseholdId } from "@/lib/services/household-service";
+import { getDefaultHouseholdId, resolveCurrentActorId } from "@/lib/services/household-service";
+import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-service";
 
 export const dynamic = "force-dynamic";
 
-export default async function MemoryPage({ searchParams }: { searchParams: Promise<{ householdId?: string }> }) {
+export default async function MemoryPage({ searchParams }: { searchParams: Promise<{ householdId?: string; actorId?: string }> }) {
   const params = await searchParams;
-  const actorId = await getDefaultActorId();
   const households = await prisma.household.findMany({ orderBy: { createdAt: "asc" } });
   const householdId = params.householdId ?? households[0]?.id ?? (await getDefaultHouseholdId());
+  const actorId = await resolveCurrentActorId(householdId, params.actorId);
+  const [members, role] = await Promise.all([
+    prisma.householdMember.findMany({
+      where: { householdId },
+      include: { user: { select: { name: true } } },
+      orderBy: { createdAt: "asc" }
+    }),
+    getHouseholdRole(householdId, actorId)
+  ]);
+  const permissions = roleCapabilities(role);
   const memory = await getHouseholdMemory(householdId);
 
   return (
@@ -26,7 +37,10 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
           meta={`${memory.dueSoon.length + memory.monthlyStaples.length + memory.frequentItems.length} suggestions`}
           description="Review recurring suggestions, due-soon items, monthly staples, learned preferences, and cautious household memory controls."
         />
-        <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
+        <div className="grid gap-3">
+          <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
+          <CurrentActorSwitcher members={members} currentActorId={actorId} />
+        </div>
       </div>
 
       {memory.fallbackUsed ? (
@@ -51,6 +65,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
           householdId={householdId}
           actorId={actorId}
           suggestions={memory.dueSoon}
+          canAddSuggestions={permissions.canAddMemorySuggestion}
           emptyTitle="Nothing due soon"
           emptyDescription="HomeStock will surface items here when repeated grocery history indicates they may be running low."
         />
@@ -61,6 +76,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
           householdId={householdId}
           actorId={actorId}
           suggestions={memory.monthlyStaples}
+          canAddSuggestions={permissions.canAddMemorySuggestion}
           emptyTitle="No monthly staples yet"
           emptyDescription="Items like atta, oil, rice, or spices will appear here after enough monthly activity is visible."
         />
@@ -71,6 +87,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
           householdId={householdId}
           actorId={actorId}
           suggestions={memory.frequentItems}
+          canAddSuggestions={permissions.canAddMemorySuggestion}
           emptyTitle="No frequent items yet"
           emptyDescription="Repeated grocery requests and cart activity will become frequent item suggestions."
         />
@@ -81,6 +98,7 @@ export default async function MemoryPage({ searchParams }: { searchParams: Promi
           householdId={householdId}
           actorId={actorId}
           suggestions={memory.learnedPreferences}
+          canAddSuggestions={permissions.canAddMemorySuggestion}
           emptyTitle="No learned preferences yet"
           emptyDescription="Preferred brands and usual quantities will appear when the household repeats cart choices."
         />

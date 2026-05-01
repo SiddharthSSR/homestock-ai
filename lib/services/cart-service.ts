@@ -4,12 +4,15 @@ import { calculateMockLineTotal } from "@/lib/providers/mock-grocery-provider";
 import { getGroceryProvider } from "@/lib/providers";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "./audit-service";
+import { assertHouseholdPermission } from "./permissions-service";
 
 function calculateCartTotal(items: Pick<CartItem, "price" | "quantity">[]) {
   return items.reduce((total, item) => total + calculateMockLineTotal(item.price, item.quantity), 0);
 }
 
 export async function prepareMockCart(householdId: string, actorId: string) {
+  await assertHouseholdPermission(householdId, actorId, "cart:prepare");
+
   const household = await prisma.household.findUniqueOrThrow({ where: { id: householdId } });
   const approvedRequests = await prisma.groceryRequest.findMany({
     where: {
@@ -82,6 +85,7 @@ export async function approveCart(cartId: string, actorId: string) {
     where: { id: cartId },
     include: { items: true }
   });
+  await assertHouseholdPermission(existing.householdId, actorId, "cart:approve");
 
   if (existing.status !== CartDraftStatus.READY_FOR_APPROVAL) {
     throw new Error("Only cart drafts that are ready for approval can be approved.");
@@ -119,6 +123,7 @@ export async function updateCartItemQuantity(cartItemId: string, actorId: string
     where: { id: cartItemId },
     include: { cartDraft: true }
   });
+  await assertHouseholdPermission(existing.cartDraft.householdId, actorId, "cart:edit");
 
   if (existing.cartDraft.status !== CartDraftStatus.READY_FOR_APPROVAL) {
     throw new Error("Only ready cart drafts can be edited.");
@@ -162,6 +167,7 @@ export async function removeCartItem(cartItemId: string, actorId: string) {
     where: { id: cartItemId },
     include: { cartDraft: { include: { items: true } } }
   });
+  await assertHouseholdPermission(existing.cartDraft.householdId, actorId, "cart:edit");
 
   if (existing.cartDraft.status !== CartDraftStatus.READY_FOR_APPROVAL) {
     throw new Error("Only ready cart drafts can be edited.");

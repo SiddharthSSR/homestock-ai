@@ -1,23 +1,34 @@
-import Link from "next/link";
 import { AlertCircle, CheckCircle2, ListPlus, ShoppingCart } from "lucide-react";
 import { GroceryGroupedList } from "@/components/GroceryGroupedList";
+import { CurrentActorSwitcher } from "@/components/CurrentActorSwitcher";
 import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
 import { PageHeader } from "@/components/PageHeader";
+import { PreservedQueryLink } from "@/components/PreservedQueryLink";
 import { PrepareCartButton } from "@/components/PrepareCartButton";
 import { RecurringSuggestionsPanel } from "@/components/RecurringSuggestionsPanel";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
 import { findDuplicateHints } from "@/lib/grocery/duplicate-hints";
 import { prisma } from "@/lib/prisma";
-import { getDefaultActorId, getDefaultHouseholdId } from "@/lib/services/household-service";
+import { getDefaultHouseholdId, resolveCurrentActorId } from "@/lib/services/household-service";
+import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-service";
 
 export const dynamic = "force-dynamic";
 
-export default async function GroceryPage({ searchParams }: { searchParams: Promise<{ householdId?: string }> }) {
+export default async function GroceryPage({ searchParams }: { searchParams: Promise<{ householdId?: string; actorId?: string }> }) {
   const params = await searchParams;
-  const actorId = await getDefaultActorId();
   const households = await prisma.household.findMany({ orderBy: { createdAt: "asc" } });
   const householdId = params.householdId ?? households[0]?.id ?? (await getDefaultHouseholdId());
+  const actorId = await resolveCurrentActorId(householdId, params.actorId);
+  const [members, role] = await Promise.all([
+    prisma.householdMember.findMany({
+      where: { householdId },
+      include: { user: { select: { name: true } } },
+      orderBy: { createdAt: "asc" }
+    }),
+    getHouseholdRole(householdId, actorId)
+  ]);
+  const permissions = roleCapabilities(role);
   const requests = await prisma.groceryRequest.findMany({
     where: { householdId },
     include: { requester: { select: { name: true } } },
@@ -42,7 +53,10 @@ export default async function GroceryPage({ searchParams }: { searchParams: Prom
           meta={`${requests.length} items`}
           description="Review every request by category, keep duplicates visible, and approve only what should move toward a cart."
         />
-        <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
+        <div className="grid gap-3">
+          <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
+          <CurrentActorSwitcher members={members} currentActorId={actorId} />
+        </div>
       </div>
 
       <section className="grid gap-3 md:grid-cols-4">
@@ -61,9 +75,9 @@ export default async function GroceryPage({ searchParams }: { searchParams: Prom
             </div>
             <p className="mt-2 text-sm text-bark">Review these synonym matches before merging household requests.</p>
           </div>
-          <Link className="rounded-md border border-cocoa/20 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/add">
+          <PreservedQueryLink className="rounded-md border border-cocoa/20 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/add">
             Add request
-          </Link>
+          </PreservedQueryLink>
         </section>
       ) : null}
 
@@ -73,11 +87,15 @@ export default async function GroceryPage({ searchParams }: { searchParams: Prom
             ? `You have ${approvedCount} approved items${urgentCount ? ` and ${urgentCount} urgent item` : ""}. A cart is ready to prepare.`
             : "Approve items first, then prepare a mock cart for review."}
         </p>
-        <PrepareCartButton householdId={householdId} actorId={actorId} disabled={approvedCount === 0} />
+        {permissions.canPrepareCart ? (
+          <PrepareCartButton householdId={householdId} actorId={actorId} disabled={approvedCount === 0} />
+        ) : (
+          <p className="max-w-sm text-sm font-semibold text-bark">Only household admins can prepare mock carts.</p>
+        )}
       </section>
 
       <RecurringSuggestionsPanel suggestions={recurringPatterns} />
-      <GroceryGroupedList requests={requests} actorId={actorId} />
+      <GroceryGroupedList requests={requests} actorId={actorId} canUseAdminActions={permissions.canApproveGrocery || permissions.canEditGrocery} />
     </div>
   );
 }

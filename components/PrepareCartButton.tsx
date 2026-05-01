@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ShoppingCart } from "lucide-react";
+import { hrefWithPreservedParams } from "@/lib/navigation";
 
 export function PrepareCartButton({ householdId, actorId, disabled }: { householdId: string; actorId: string; disabled?: boolean }) {
   const [isPreparing, setIsPreparing] = useState(false);
@@ -23,7 +24,7 @@ export function PrepareCartButton({ householdId, actorId, disabled }: { househol
         throw new Error(body.error ?? "Could not prepare mock cart.");
       }
 
-      window.location.href = `/cart?householdId=${householdId}`;
+      window.location.href = hrefWithPreservedParams("/cart", { householdId, actorId });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not prepare mock cart.");
       setIsPreparing(false);

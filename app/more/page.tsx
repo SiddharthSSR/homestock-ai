@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { BookOpenCheck, ChevronRight, Home, LockKeyhole, Settings2, ShieldCheck, ShoppingCart, Sparkles, Store } from "lucide-react";
 import { CategorySection } from "@/components/CategorySection";
 import { PageHeader } from "@/components/PageHeader";
+import { PreservedQueryLink } from "@/components/PreservedQueryLink";
 import { StatusPill } from "@/components/StatusPill";
 
 const primaryLinks = [
@@ -79,7 +79,7 @@ export default function MorePage() {
           {quickSettings.map((item) => {
             const Icon = item.icon;
             return (
-              <Link
+              <PreservedQueryLink
                 key={item.title}
                 href={item.href}
                 className="flex min-h-20 items-center gap-3 rounded-lg border border-cocoa/10 bg-paper p-4 shadow-panel transition hover:-translate-y-0.5 hover:bg-cream"
@@ -92,7 +92,7 @@ export default function MorePage() {
                   <span className="mt-1 block text-sm leading-5 text-bark">{item.description}</span>
                 </span>
                 <ChevronRight className="h-5 w-5 shrink-0 text-bark" />
-              </Link>
+              </PreservedQueryLink>
             );
           })}
         </div>
@@ -127,7 +127,7 @@ function NavigationCard({
   tone: "pending" | "approved" | "cart" | "neutral";
 }) {
   return (
-    <Link
+    <PreservedQueryLink
       href={href}
       className="group flex min-h-28 items-start gap-4 rounded-[1.25rem] border border-cocoa/10 bg-paper p-4 shadow-editorial transition hover:-translate-y-0.5 hover:bg-cream"
     >
@@ -142,6 +142,6 @@ function NavigationCard({
         <span className="mt-2 block text-sm leading-6 text-bark">{description}</span>
       </span>
       <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-bark transition group-hover:translate-x-0.5" />
-    </Link>
+    </PreservedQueryLink>
   );
 }

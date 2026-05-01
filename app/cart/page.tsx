@@ -1,19 +1,30 @@
 import { CartDraftView } from "@/components/CartDraftView";
+import { CurrentActorSwitcher } from "@/components/CurrentActorSwitcher";
 import { EmptyState } from "@/components/EmptyState";
 import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
 import { PageHeader } from "@/components/PageHeader";
 import { PrepareCartButton } from "@/components/PrepareCartButton";
 import { SummaryCard } from "@/components/SummaryCard";
 import { prisma } from "@/lib/prisma";
-import { getDefaultActorId, getDefaultHouseholdId } from "@/lib/services/household-service";
+import { getDefaultHouseholdId, resolveCurrentActorId } from "@/lib/services/household-service";
+import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-service";
 
 export const dynamic = "force-dynamic";
 
-export default async function CartPage({ searchParams }: { searchParams: Promise<{ householdId?: string }> }) {
+export default async function CartPage({ searchParams }: { searchParams: Promise<{ householdId?: string; actorId?: string }> }) {
   const params = await searchParams;
-  const actorId = await getDefaultActorId();
   const households = await prisma.household.findMany({ orderBy: { createdAt: "asc" } });
   const householdId = params.householdId ?? households[0]?.id ?? (await getDefaultHouseholdId());
+  const actorId = await resolveCurrentActorId(householdId, params.actorId);
+  const [members, role] = await Promise.all([
+    prisma.householdMember.findMany({
+      where: { householdId },
+      include: { user: { select: { name: true } } },
+      orderBy: { createdAt: "asc" }
+    }),
+    getHouseholdRole(householdId, actorId)
+  ]);
+  const permissions = roleCapabilities(role);
   const carts = await prisma.cartDraft.findMany({
     where: { householdId },
     include: { items: true },
@@ -35,7 +46,10 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
           meta="No checkout"
           description="Prepare and approve a household cart draft. Swiggy is not connected, so all prices and availability are mock provider estimates."
         />
-        <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
+        <div className="grid gap-3">
+          <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
+          <CurrentActorSwitcher members={members} currentActorId={actorId} />
+        </div>
       </div>
 
       <section className="grid gap-3 md:grid-cols-3">
@@ -54,14 +68,18 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
           </p>
           <p className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-bark">No checkout, payment, or Swiggy order is available in this flow.</p>
         </div>
-        <PrepareCartButton householdId={householdId} actorId={actorId} disabled={approvedRequestCount === 0} />
+        {permissions.canPrepareCart ? (
+          <PrepareCartButton householdId={householdId} actorId={actorId} disabled={approvedRequestCount === 0} />
+        ) : (
+          <p className="max-w-sm text-sm font-semibold text-bark">Only household admins can prepare mock carts.</p>
+        )}
       </section>
 
       <div className="grid gap-4">
         {latestCart ? (
           <>
             {carts.length > 1 ? <p className="text-sm text-bark">Showing latest cart draft. {carts.length - 1} older draft{carts.length > 2 ? "s are" : " is"} hidden from this review.</p> : null}
-            <CartDraftView cart={latestCart} actorId={actorId} />
+            <CartDraftView cart={latestCart} actorId={actorId} canEditCart={permissions.canEditCart} canApproveCart={permissions.canApproveCart} />
           </>
         ) : (
           <EmptyState title="No cart drafts yet" description="Approve grocery requests first, then prepare a mock cart for admin review." />

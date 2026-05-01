@@ -1,13 +1,16 @@
+import { CurrentActorSwitcher } from "@/components/CurrentActorSwitcher";
+import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
 import { prisma } from "@/lib/prisma";
-import { getDefaultActorId } from "@/lib/services/household-service";
+import { getDefaultHouseholdId, resolveCurrentActorId } from "@/lib/services/household-service";
+import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-service";
 
 export const dynamic = "force-dynamic";
 
-export default async function HouseholdPage() {
-  const actorId = await getDefaultActorId();
+export default async function HouseholdPage({ searchParams }: { searchParams: Promise<{ householdId?: string; actorId?: string }> }) {
+  const params = await searchParams;
   const households = await prisma.household.findMany({
     include: {
       members: {
@@ -21,19 +24,36 @@ export default async function HouseholdPage() {
     },
     orderBy: { createdAt: "asc" }
   });
+  const householdId = params.householdId ?? households[0]?.id ?? (await getDefaultHouseholdId());
+  const actorId = await resolveCurrentActorId(householdId, params.actorId);
+  const [members, role] = await Promise.all([
+    prisma.householdMember.findMany({
+      where: { householdId },
+      include: { user: { select: { name: true } } },
+      orderBy: { createdAt: "asc" }
+    }),
+    getHouseholdRole(householdId, actorId)
+  ]);
+  const permissions = roleCapabilities(role);
   const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
-  const activeHousehold = households[0];
+  const activeHousehold = households.find((household) => household.id === householdId) ?? households[0];
   const adminCount = activeHousehold?.members.filter((member) => member.role === "ADMIN").length ?? 0;
   const cookCount = activeHousehold?.members.filter((member) => member.role === "COOK").length ?? 0;
 
   return (
     <div className="grid gap-6">
-      <PageHeader
-        eyebrow="Household"
-        title="Family Controls"
-        meta={`${households.length} household${households.length === 1 ? "" : "s"}`}
-        description="Manage members, roles, approval rules, grocery preferences, and how household memory is used."
-      />
+      <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+        <PageHeader
+          eyebrow="Household"
+          title="Family Controls"
+          meta={`${households.length} household${households.length === 1 ? "" : "s"}`}
+          description="Manage members, roles, approval rules, grocery preferences, and how household memory is used."
+        />
+        <div className="grid gap-3">
+          <HouseholdSwitcher households={households} currentHouseholdId={householdId} />
+          <CurrentActorSwitcher members={members} currentActorId={actorId} />
+        </div>
+      </div>
 
       <section className="grid gap-3 md:grid-cols-3">
         <SummaryCard label="Members" value={activeHousehold?.members.length ?? 0} detail="Across roles" tone="lavender" />
@@ -41,15 +61,19 @@ export default async function HouseholdPage() {
         <SummaryCard label="Cook helpers" value={cookCount} detail="Simple request mode" tone="sage" />
       </section>
 
-      <section className="rounded-[1.5rem] border border-cocoa/10 bg-paper p-5 shadow-editorial">
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-bark">Create household</p>
-        <form action="/api/households" method="post" className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-          <input name="name" aria-label="Household name" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-cocoa" placeholder="Household name" required />
-          <input name="location" aria-label="Household location" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-cocoa" placeholder="Location" />
-          <input type="hidden" name="createdBy" value={actorId} />
-          <button className="rounded-md bg-forest px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-paper hover:bg-cocoa">Create</button>
-        </form>
-      </section>
+      {permissions.canManageHousehold ? (
+        <section className="rounded-[1.5rem] border border-cocoa/10 bg-paper p-5 shadow-editorial">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-bark">Create household</p>
+          <form action="/api/households" method="post" className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+            <input name="name" aria-label="Household name" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-cocoa" placeholder="Household name" required />
+            <input name="location" aria-label="Household location" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-cocoa" placeholder="Location" />
+            <input type="hidden" name="createdBy" value={actorId} />
+            <button className="rounded-md bg-forest px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-paper hover:bg-cocoa">Create</button>
+          </form>
+        </section>
+      ) : (
+        <section className="rounded-lg border border-cocoa/10 bg-paper p-5 text-sm font-semibold text-bark shadow-panel">Only household admins can manage household settings.</section>
+      )}
 
       <section className="grid gap-4">
         {households.map((household) => (
@@ -60,7 +84,9 @@ export default async function HouseholdPage() {
                 <h2 className="font-editorial mt-2 text-4xl font-semibold text-cocoa">{household.name}</h2>
                 <p className="mt-1 text-sm text-bark">{household.location ?? "No location set"}</p>
               </div>
+              {permissions.canManageHousehold ? (
               <form action={`/api/households/${household.id}/members`} method="post" className="flex flex-wrap gap-2">
+                <input type="hidden" name="actorId" value={actorId} />
                 <select name="userId" aria-label="Household member" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>
@@ -75,6 +101,7 @@ export default async function HouseholdPage() {
                 </select>
                 <button className="rounded-md border border-cocoa/20 bg-cream px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cocoa">Add member</button>
               </form>
+              ) : null}
             </div>
 
             <div className="mt-5 grid gap-3 md:grid-cols-3">

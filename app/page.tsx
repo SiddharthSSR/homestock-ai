@@ -1,15 +1,17 @@
-import Link from "next/link";
 import { AlertCircle, CheckCircle2, IndianRupee, ListChecks } from "lucide-react";
 import { AddMemorySuggestionButton } from "@/components/AddMemorySuggestionButton";
 import { CategorySection } from "@/components/CategorySection";
+import { CurrentActorSwitcher } from "@/components/CurrentActorSwitcher";
 import { EmptyState } from "@/components/EmptyState";
 import { MemorySuggestionCard } from "@/components/MemorySuggestionCard";
 import { PageHeader } from "@/components/PageHeader";
+import { PreservedQueryLink } from "@/components/PreservedQueryLink";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
 import { prisma } from "@/lib/prisma";
 import { getHouseholdMemory } from "@/lib/services/memory-service";
-import { getDefaultActorId } from "@/lib/services/household-service";
+import { resolveCurrentActorId } from "@/lib/services/household-service";
+import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-service";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +33,21 @@ const recentActivity = [
   }
 ];
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ actorId?: string }> }) {
+  const params = await searchParams;
   const household = await prisma.household.findFirst({ orderBy: { createdAt: "asc" } });
-  const actorId = await getDefaultActorId();
+  const actorId = household ? await resolveCurrentActorId(household.id, params.actorId) : "";
+  const [members, role] = household
+    ? await Promise.all([
+        prisma.householdMember.findMany({
+          where: { householdId: household.id },
+          include: { user: { select: { name: true } } },
+          orderBy: { createdAt: "asc" }
+        }),
+        getHouseholdRole(household.id, actorId)
+      ])
+    : [[], null];
+  const permissions = roleCapabilities(role);
   const householdName = household?.name ?? "Sharma Family";
   const headerMeta = formatHeaderMeta(new Date());
   const [requestCounts, latestCart, memory] = household
@@ -71,13 +85,15 @@ export default async function HomePage() {
             tone="peach"
             icon={AlertCircle}
             action={
-              <Link className="inline-flex rounded-md bg-peachDeep px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" href="/approve">
+              <PreservedQueryLink className="inline-flex rounded-md bg-peachDeep px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" href="/approve">
                 Review
-              </Link>
+              </PreservedQueryLink>
             }
           />
         </div>
       </PageHeader>
+
+      {household ? <CurrentActorSwitcher members={members} currentActorId={actorId} /> : null}
 
       <section className="grid gap-3 sm:grid-cols-2">
         <SummaryCard label="Estimated cart" value={latestCart ? `₹${latestCart.estimatedTotal.toFixed(0)}` : "₹0"} detail="Latest mock cart estimate" tone="paper" icon={IndianRupee} />
@@ -92,7 +108,7 @@ export default async function HomePage() {
               title={item.displayName}
               detail={`${item.category} · ${item.reason}`}
               action={
-                household ? <AddMemorySuggestionButton householdId={household.id} actorId={actorId} suggestion={item} /> : null
+                household && permissions.canAddMemorySuggestion ? <AddMemorySuggestionButton householdId={household.id} actorId={actorId} suggestion={item} /> : <p className="text-sm font-semibold text-bark">Only household admins and members can add memory suggestions.</p>
               }
             />
           ))}
