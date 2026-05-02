@@ -11,7 +11,7 @@ Main layers:
 - Domain services: grocery request creation, duplicate handling, cart preparation, and auditing.
 - Parser: deterministic fallback parser with optional future LLM interface.
 - Data: Prisma schema for users, households, grocery requests, preferences, carts, orders, recurring patterns, and audit logs.
-- Commerce provider: `GroceryCommerceProvider` with `MockGroceryProvider` now and `SwiggyInstamartProvider` later.
+- Commerce provider: `GroceryCommerceProvider` with `MockGroceryProvider` now and a non-operational `SwiggyInstamartProvider` stub for later.
 
 ## Data Model
 
@@ -43,7 +43,7 @@ The request model stores both `displayName` and `canonicalName`. This preserves 
 - `placeOrder(cartId, approvalToken)`
 - `trackOrder(orderId)`
 
-The mock provider returns deterministic fake products and prices. The Swiggy provider currently throws explicit not-configured errors and contains TODOs for official MCP wiring only after Builders Club access is granted.
+The mock provider returns deterministic fake products and prices. The Swiggy provider currently throws explicit not-configured errors and contains TODOs for official MCP wiring only after Builders Club access is granted. Provider readiness details live in [provider-architecture.md](provider-architecture.md).
 
 ## Agent / Parser Flow
 

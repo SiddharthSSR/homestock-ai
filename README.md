@@ -13,4 +13,4 @@ HomeStock AI is a shared household grocery memory and approval assistant. The Ph
 
 The seed command creates deterministic QA households for empty states, starter approval flows, mock cart review, and memory-rich testing. See [docs/dev-seed-data.md](docs/dev-seed-data.md) for household names, roles, and suggested QA flows.
 
-The Swiggy Instamart integration is intentionally stubbed until official Builders Club access and tool documentation are available.
+The Swiggy Instamart integration is intentionally stubbed until official Builders Club access and tool documentation are available. Local development uses the mock grocery provider by default; see [docs/provider-architecture.md](docs/provider-architecture.md) and [docs/swiggy-builders-club-integration.md](docs/swiggy-builders-club-integration.md).
