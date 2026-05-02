@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getGroceryProvider } from ".";
 import { calculateMockLineTotal, MockGroceryProvider } from "./mock-grocery-provider";
 
 describe("MockGroceryProvider", () => {
@@ -66,5 +67,9 @@ describe("MockGroceryProvider", () => {
       availabilityStatus: "SUBSTITUTED",
       substitutionReason: "No exact mock catalog match; showing a placeholder substitute."
     });
+  });
+
+  it("is the provider used by safe default provider selection", () => {
+    expect(getGroceryProvider()).toBeInstanceOf(MockGroceryProvider);
   });
 });

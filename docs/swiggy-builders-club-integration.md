@@ -6,9 +6,15 @@
 - Developers page: https://mcp.swiggy.com/builders/developers/
 - Enterprises page: https://mcp.swiggy.com/builders/enterprises/
 
+## Current HomeStock Status
+
+HomeStock AI currently uses `MockGroceryProvider` for cart preparation and review. Swiggy is not connected, no Swiggy credentials are required for local development, and no real checkout or order placement is available.
+
+The `SwiggyInstamartProvider` exists only as a non-operational integration stub. It throws explicit not-configured errors until official access, credentials, and confirmed MCP schemas are available.
+
 ## Confirmed From Public Docs
 
-As of April 26, 2026, the public Builders Club pages state that Swiggy provides an MCP platform for developers and enterprises to build AI agents, apps, and integrations on Swiggy Food, Instamart, and Dineout APIs.
+As of May 2, 2026, the public Builders Club pages state that Swiggy provides an MCP platform for developers and enterprises to build AI agents, apps, and integrations on Swiggy Food, Instamart, and Dineout APIs.
 
 The public developers page lists three MCP servers:
 
@@ -23,6 +29,7 @@ For this product, the relevant public Instamart capabilities are grocery product
 - Exact MCP authentication, request schemas, response schemas, rate limits, sandbox behavior, and production requirements are not available in this repo.
 - Tool names visible on the public page are useful planning context, but implementation must verify exact callable tools after official access is granted.
 - Price, inventory, delivery time, substitutions, and checkout constraints must come from official Swiggy MCP responses, not local guesses.
+- OAuth or credential names in `.env.example` are placeholders only and may change after official documentation is granted.
 
 ## Instamart Features For HomeStock AI
 
@@ -59,6 +66,16 @@ After official Builders Club access is granted:
 7. Add integration tests using official sandbox or approved test environment.
 
 The current provider stub must remain non-operational until those steps are complete.
+
+## Readiness Checklist
+
+- Apply for Builders Club access.
+- Confirm official Instamart MCP tools and schemas.
+- Configure credentials through environment variables or approved secret storage.
+- Keep `GroceryCommerceProvider` as the only commerce boundary.
+- Add tests proving mock mode makes no external Swiggy calls.
+- Keep admin approval before any checkout operation.
+- Keep mock estimates clearly labeled until live Swiggy responses are available.
 
 ## Explicit Warning
 
