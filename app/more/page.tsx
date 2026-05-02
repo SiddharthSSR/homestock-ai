@@ -1,10 +1,17 @@
-import { BookOpenCheck, ChevronRight, Home, LockKeyhole, Settings2, ShieldCheck, ShoppingCart, Sparkles, Store } from "lucide-react";
+import { BellRing, BookOpenCheck, ChevronRight, Home, LockKeyhole, Settings2, ShieldCheck, ShoppingCart, Sparkles, Store } from "lucide-react";
 import { CategorySection } from "@/components/CategorySection";
 import { PageHeader } from "@/components/PageHeader";
 import { PreservedQueryLink } from "@/components/PreservedQueryLink";
 import { StatusPill } from "@/components/StatusPill";
 
 const primaryLinks = [
+  {
+    href: "/notifications",
+    title: "Notifications",
+    description: "Review generated reminders for approvals, cart review, memory, and request status.",
+    icon: BellRing,
+    tone: "pending" as const
+  },
   {
     href: "/cart",
     title: "Cart",

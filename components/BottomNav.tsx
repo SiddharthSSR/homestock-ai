@@ -9,7 +9,7 @@ const items = [
   { href: "/grocery", label: "List", icon: ListChecks, matches: ["/grocery"] },
   { href: "/add", label: "Add", icon: Plus, matches: ["/add"] },
   { href: "/approve", label: "Approve", icon: CheckCircle2, matches: ["/approve"] },
-  { href: "/more", label: "More", icon: MoreHorizontal, matches: ["/more", "/cart", "/memory", "/household", "/integrations/swiggy"] }
+  { href: "/more", label: "More", icon: MoreHorizontal, matches: ["/more", "/cart", "/memory", "/notifications", "/household", "/integrations/swiggy"] }
 ];
 
 export function BottomNav() {
