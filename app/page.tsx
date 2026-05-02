@@ -6,10 +6,12 @@ import { EmptyState } from "@/components/EmptyState";
 import { MemorySuggestionCard } from "@/components/MemorySuggestionCard";
 import { PageHeader } from "@/components/PageHeader";
 import { PreservedQueryLink } from "@/components/PreservedQueryLink";
+import { ReminderList } from "@/components/ReminderList";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
 import { resolveSelectedHousehold } from "@/lib/household-selection";
 import { prisma } from "@/lib/prisma";
+import { getHouseholdReminders } from "@/lib/services/reminder-service";
 import { getHouseholdMemory } from "@/lib/services/memory-service";
 import { getDefaultHouseholdId, resolveCurrentActorId } from "@/lib/services/household-service";
 import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-service";
@@ -54,7 +56,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const permissions = roleCapabilities(role);
   const householdName = household?.name ?? "Sharma Family";
   const headerMeta = formatHeaderMeta(new Date());
-  const [requestCounts, latestCart, memory] = household
+  const [requestCounts, latestCart, memory, reminders] = household
     ? await Promise.all([
         prisma.groceryRequest.groupBy({
           by: ["status"],
@@ -65,9 +67,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           where: { householdId: household.id },
           orderBy: { createdAt: "desc" }
         }),
-        getHouseholdMemory(household.id)
+        getHouseholdMemory(household.id),
+        getHouseholdReminders({ householdId: household.id, actorId })
       ])
-    : [[], null, null] as const;
+    : [[], null, null, []] as const;
   const itemsInList = requestCounts.reduce((total, row) => total + row._count._all, 0);
   const needsApproval = requestCounts.find((row) => row.status === "PENDING")?._count._all ?? 0;
   const runningLowItems = memory ? [...memory.dueSoon, ...memory.monthlyStaples].slice(0, 2) : [];
@@ -98,6 +101,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       </PageHeader>
 
       {household ? <CurrentActorSwitcher members={members} currentActorId={actorId} /> : null}
+
+      <CategorySection title="Needs Attention" count={reminders.length}>
+        <ReminderList reminders={reminders.slice(0, 4)} />
+        {reminders.length > 4 ? (
+          <PreservedQueryLink className="justify-self-start rounded-md border border-cocoa/15 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/notifications">
+            View all reminders
+          </PreservedQueryLink>
+        ) : null}
+      </CategorySection>
 
       <section className="grid gap-3 sm:grid-cols-2">
         <SummaryCard label="Estimated cart" value={latestCart ? `₹${latestCart.estimatedTotal.toFixed(0)}` : "₹0"} detail="Latest mock cart estimate" tone="paper" icon={IndianRupee} />

@@ -11,6 +11,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-editorial text-2xl font-semibold text-cocoa">HomeStock AI</span>
           </PreservedQueryLink>
           <div className="hidden items-center gap-1 text-sm font-semibold md:flex">
+            <PreservedQueryLink className="rounded-md px-3 py-2 text-bark hover:bg-paper" href="/notifications">
+              Notifications
+            </PreservedQueryLink>
             <PreservedQueryLink className="rounded-md px-3 py-2 text-bark hover:bg-paper" href="/memory">
               Memory
             </PreservedQueryLink>
