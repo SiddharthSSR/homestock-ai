@@ -18,7 +18,7 @@ import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-s
 
 export const dynamic = "force-dynamic";
 
-const recentActivity = [
+const demoActivity = [
   {
     title: "Cook added tomato, onion, oil",
     meta: "Today",
@@ -131,10 +131,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
       </CategorySection>
 
-      <CategorySection title="Recent Activity">
+      <CategorySection title="Demo Activity">
         <div className="grid gap-3">
-          {recentActivity.length ? (
-            recentActivity.map((activity) => (
+          {demoActivity.length ? (
+            demoActivity.map((activity) => (
               <article key={activity.title} className="rounded-lg border border-cocoa/10 bg-paper p-4 shadow-panel">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -146,7 +146,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               </article>
             ))
           ) : (
-            <EmptyState title="No recent activity" description="Grocery requests and approvals will appear here." />
+            <EmptyState title="No demo activity" description="Grocery requests and approvals will appear here." />
           )}
         </div>
       </CategorySection>

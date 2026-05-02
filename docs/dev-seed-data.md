@@ -34,6 +34,13 @@ Users, grocery catalog items, and grocery synonyms are upserted. Re-running the 
 
 ## Fixture Households
 
+Use this quick map during demos:
+
+- Start with `QA Starter Household` for cook request capture and admin approval.
+- Move to `QA Cart Household` for mock cart review and approval.
+- Move to `QA Memory Household` for memory suggestions, dismiss/restore, and reminders.
+- Use `QA Empty Household` only when demonstrating empty states.
+
 ### QA Empty Household
 
 Purpose:
@@ -113,3 +120,17 @@ You can use those IDs in URLs when needed:
 ```
 
 Prefer the in-app switchers for regular QA, because IDs are regenerated when fixture households are reseeded.
+
+## Suggested Demo Routes
+
+After selecting the right household and actor in the UI:
+
+- Cook request capture: `/add`
+- Admin approval: `/approve`
+- Shared grocery list: `/grocery`
+- Mock cart review: `/cart`
+- Memory suggestions: `/memory`
+- Reminders: `/notifications`
+- Swiggy readiness: `/integrations/swiggy`
+
+See [demo-script.md](demo-script.md) for the full walkthrough.
