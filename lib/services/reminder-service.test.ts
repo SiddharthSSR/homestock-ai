@@ -97,7 +97,7 @@ describe("generateReminders", () => {
           canonicalName: "milk",
           displayName: "Milk",
           category: "Dairy",
-          reason: "Milk usually appears every 2-3 days. Last seen 3 days ago.",
+          reason: "Milk — usually expected every 2-3 days. Last seen 3 days ago.",
           confidence: 0.8,
           lastSeenAt: now,
           suggestedQuantity: 1,

@@ -31,7 +31,7 @@ function dismissal(overrides: Partial<MemoryDismissalRecord> = {}): MemoryDismis
     dismissedBy: "user-1",
     dismissedAt: daysAgo(0),
     expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-    reason: "Milk usually appears every 2-3 days.",
+    reason: "Milk — usually expected every 2-3 days.",
     createdAt: daysAgo(0),
     updatedAt: daysAgo(0),
     ...overrides
@@ -56,7 +56,7 @@ describe("generateHouseholdMemory", () => {
       suggestedQuantity: 1,
       suggestedUnit: "litre"
     });
-    expect(memory.dueSoon[0].reason).toContain("usually appears every 2-3 days");
+    expect(memory.dueSoon[0].reason).toContain("usually expected every 2-3 days");
   });
 
   it("does not claim learned recurrence when household data is insufficient", () => {
