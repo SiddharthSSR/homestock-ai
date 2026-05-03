@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
+// Demo-only: can silently create a "Local Admin" user. Do not invoke in
+// production auth paths. Phase 3 will hard-gate this behind isDemoModeEnabled().
 export async function getDefaultActorId() {
   const user = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
   if (user) return user.id;
@@ -14,6 +16,8 @@ export async function getDefaultActorId() {
   return created.id;
 }
 
+// Demo-only: can silently create a "My Household" + admin user. Do not invoke
+// in production auth paths. Phase 3 will hard-gate this behind isDemoModeEnabled().
 export async function getDefaultHouseholdId() {
   const household = await prisma.household.findFirst({ orderBy: { createdAt: "asc" } });
   if (household) return household.id;
