@@ -24,7 +24,7 @@ export function RecurringSuggestionsPanel({ suggestions }: { suggestions: Sugges
               <MemorySuggestionCard
                 key={suggestion.id}
                 title={suggestion.groceryItem.displayName}
-                detail={`${suggestion.groceryItem.displayName} usually appears every ${suggestion.averageIntervalDays} days. Last seen ${daysSince} days ago.`}
+                detail={`${suggestion.groceryItem.displayName} — usually expected every ${suggestion.averageIntervalDays} days. Last seen ${daysSince} days ago.`}
               />
             );
           })

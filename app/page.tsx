@@ -9,7 +9,7 @@ import { PreservedQueryLink } from "@/components/PreservedQueryLink";
 import { ReminderList } from "@/components/ReminderList";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
-import { resolveSelectedHousehold } from "@/lib/household-selection";
+import { isDemoModeEnabled, pickDemoDefaultHousehold, resolveSelectedHousehold } from "@/lib/household-selection";
 import { prisma } from "@/lib/prisma";
 import { getHouseholdReminders } from "@/lib/services/reminder-service";
 import { getHouseholdMemory } from "@/lib/services/memory-service";
@@ -38,8 +38,10 @@ const demoActivity = [
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ householdId?: string; actorId?: string }> }) {
   const params = await searchParams;
+  const demoMode = isDemoModeEnabled();
   const households = await prisma.household.findMany({ orderBy: { createdAt: "asc" } });
-  const selectedHousehold = resolveSelectedHousehold(households, params.householdId);
+  const matchedHousehold = params.householdId ? households.find((entry) => entry.id === params.householdId) ?? null : null;
+  const selectedHousehold = matchedHousehold ?? (demoMode ? pickDemoDefaultHousehold(households) : resolveSelectedHousehold(households, null));
   const fallbackHousehold = selectedHousehold ? null : await prisma.household.findUnique({ where: { id: await getDefaultHouseholdId() } });
   const household = selectedHousehold ?? fallbackHousehold;
   const actorId = household ? await resolveCurrentActorId(household.id, params.actorId) : "";
@@ -110,6 +112,36 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </PreservedQueryLink>
         ) : null}
       </CategorySection>
+
+      {demoMode ? (
+        <section className="rounded-xl border border-cocoa/10 bg-cream p-5 shadow-panel">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-cocoa/60">Hosted demo</p>
+          <h2 className="mt-1 font-serif text-2xl text-cocoa">Try the demo</h2>
+          <p className="mt-2 text-sm text-bark">
+            A short walk-through of how a household captures requests, approves them, and learns recurring needs.
+          </p>
+          <ol className="mt-4 grid gap-2 text-sm text-bark sm:grid-cols-2">
+            <li>1. Switch to Cook and add: &ldquo;Aata, tamatar, pyaaz, tel&rdquo;</li>
+            <li>2. Switch to Admin and approve requests</li>
+            <li>3. Review the mock cart</li>
+            <li>4. Open Memory to see recurring suggestions</li>
+          </ol>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <PreservedQueryLink className="inline-flex rounded-md bg-forest px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" href="/add">
+              Add groceries
+            </PreservedQueryLink>
+            <PreservedQueryLink className="inline-flex rounded-md border border-cocoa/15 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/approve">
+              Review approvals
+            </PreservedQueryLink>
+            <PreservedQueryLink className="inline-flex rounded-md border border-cocoa/15 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/cart">
+              View cart
+            </PreservedQueryLink>
+            <PreservedQueryLink className="inline-flex rounded-md border border-cocoa/15 bg-paper px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cocoa hover:bg-cream" href="/memory">
+              Open memory
+            </PreservedQueryLink>
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2">
         <SummaryCard label="Estimated cart" value={latestCart ? `₹${latestCart.estimatedTotal.toFixed(0)}` : "₹0"} detail="Latest mock cart estimate" tone="paper" icon={IndianRupee} />
