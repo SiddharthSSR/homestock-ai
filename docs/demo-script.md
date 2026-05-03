@@ -1,8 +1,10 @@
 # HomeStock AI Demo Script
 
-This script is designed for a five-minute local demo after running `npm run prisma:seed` and `npm run dev`.
+This script is designed for a five-minute demo after running `npm run prisma:seed` locally, or after seeding a hosted demo database.
 
 Use the in-app household switcher and MVP actor switcher. Household IDs change after each seed run, so avoid hardcoding URLs unless you copy the fresh IDs from the seed output.
+
+For hosted demos, confirm the demo banner is visible. The hosted demo is mutable shared demo data, not production.
 
 ## Setup
 
@@ -12,6 +14,7 @@ Expected:
 - Warm household dashboard loads.
 - Household switcher is visible on functional pages.
 - MVP actor switcher shows the current local demo actor and role.
+- If `NEXT_PUBLIC_DEMO_MODE=true`, the demo banner says mock provider only, no real checkout, no Swiggy API calls, and actor switching is demo-only.
 
 Say:
 > HomeStock AI is a shared grocery memory and approval assistant. It captures grocery requests from household members and cooks, normalizes them, routes them for approval, remembers recurring items, and prepares mock cart drafts without placing real orders.

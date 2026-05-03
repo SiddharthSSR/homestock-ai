@@ -45,5 +45,11 @@ HomeStock AI is an MVP intended for local product validation and demo workflows.
 
 ## Deployment
 
-- The repo is optimized for local development right now.
-- Production deployment, managed database setup, and monitoring remain future work.
+- Hosted demo deployment is still demo mode, not production.
+- Public demo data is mutable because production authentication is not implemented.
+- `actorId` role switching remains demo-only.
+- QA fixture households are deleted and recreated when seed runs, so hosted demo household IDs change after each reset.
+- Hosted demos must keep the mock provider active and must not enable real checkout, payment, Swiggy API calls, or external notifications.
+- Production authentication, monitoring, and operational hardening remain future work.
+
+See [deployment.md](deployment.md) for hosted demo setup and safety checks.
