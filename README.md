@@ -92,6 +92,8 @@ Required for local development:
 ```env
 DATABASE_URL="postgresql://homestock:homestock@localhost:5432/homestock_ai?schema=public"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+DEMO_MODE="true"
+NEXT_PUBLIC_DEMO_MODE="true"
 ```
 
 Provider defaults:
@@ -142,6 +144,20 @@ npm run build
 npx vitest run
 npm run prisma:seed
 ```
+
+## Deployment
+
+HomeStock AI is ready for a safe hosted demo deployment on Vercel with a managed PostgreSQL database.
+
+This is demo mode, not production:
+
+- actor switching is demo-only,
+- `MockGroceryProvider` remains active,
+- real checkout and payment are disabled,
+- Swiggy is not connected,
+- no external notifications are sent.
+
+See [docs/deployment.md](docs/deployment.md) for Vercel setup, hosted Postgres requirements, migration commands, seed strategy, and the deployment verification checklist.
 
 ## Swiggy Builders Club Readiness
 
