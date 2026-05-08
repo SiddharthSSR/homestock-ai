@@ -1,5 +1,6 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Nodemailer from "next-auth/providers/nodemailer";
+import Resend from "next-auth/providers/resend";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { isDemoModeEnabled } from "@/lib/household-selection";
@@ -11,42 +12,47 @@ import {
 
 export { devLogVerificationRequest, type AuthReadiness } from "@/lib/auth/readiness";
 
-// Auth scaffolding. Demo mode behaves exactly as before: NextAuth is registered
-// so /api/auth/* doesn't 404, but no provider is wired and getCurrentActor()
-// short-circuits to actorId resolution.
+// Auth provider selection. See lib/auth/readiness.ts for the priority rules.
 //
-// Non-demo mode supports two email-provider paths:
+// Demo mode keeps NextAuth registered so /api/auth/* doesn't 404, but no
+// provider is wired up; `getCurrentActor()` short-circuits to actorId
+// resolution and `/sign-in` shows the demo notice.
 //
-// 1. Real SMTP. Set EMAIL_SERVER + EMAIL_FROM and the provider routes through
-//    Nodemailer as usual. Recommended for any deployed environment.
+// Non-demo deployments should set AUTH_RESEND_KEY + AUTH_EMAIL_FROM for the
+// Resend provider, plus AUTH_SECRET. See docs/auth-readiness.md.
 //
-// 2. Dev-log magic link (LOCAL ONLY). Set AUTH_DEV_LOG_MAGIC_LINK=true and
-//    sign-in URLs are written to the server stdout instead of being mailed.
-//    Registers the Nodemailer provider with a placeholder server so Auth.js
-//    treats auth as configured. The dev pastes the URL from the terminal into
-//    a browser.
-//
-// AUTH_DEV_LOG_MAGIC_LINK MUST remain unset in any deployed environment. The
-// runbook in docs/non-demo-auth-smoke.md walks through the only intended use.
+// AUTH_DEV_LOG_MAGIC_LINK=true is intended for local smoke testing only; it is
+// disabled when NODE_ENV === "production" and `unsafeProductionDevLog` is
+// surfaced via authReadinessStatus() so /sign-in can warn.
 
-const emailServer = process.env.EMAIL_SERVER;
-const emailFrom = process.env.EMAIL_FROM;
-const devLogMagicLink = process.env.AUTH_DEV_LOG_MAGIC_LINK === "true";
-
-const hasSmtp = Boolean(emailServer && emailFrom);
+const readiness = computeAuthReadiness(process.env, isDemoModeEnabled());
 
 const providers: NextAuthConfig["providers"] = [];
-if (hasSmtp || devLogMagicLink) {
+if (readiness.provider === "resend") {
+  providers.push(
+    Resend({
+      apiKey: process.env.AUTH_RESEND_KEY!,
+      from: process.env.AUTH_EMAIL_FROM!
+    })
+  );
+} else if (readiness.provider === "dev-log") {
   providers.push(
     Nodemailer({
-      server: emailServer ?? "smtp://localhost:25",
-      from: emailFrom ?? "auth@homestock.local",
-      ...(devLogMagicLink ? { sendVerificationRequest: devLogVerificationRequest } : {})
+      server: process.env.EMAIL_SERVER ?? "smtp://localhost:25",
+      from: process.env.EMAIL_FROM ?? "auth@homestock.local",
+      sendVerificationRequest: devLogVerificationRequest
+    })
+  );
+} else if (readiness.provider === "smtp") {
+  providers.push(
+    Nodemailer({
+      server: process.env.EMAIL_SERVER!,
+      from: process.env.EMAIL_FROM!
     })
   );
 }
 
-export const isAuthConfigured = providers.length > 0 && Boolean(process.env.AUTH_SECRET);
+export const isAuthConfigured = readiness.isConfigured;
 
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),

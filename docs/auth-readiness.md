@@ -1,10 +1,34 @@
 # Auth Readiness
 
-HomeStock AI is moving from MVP `actorId` query-string switching to real authentication. Phases 1, 2, 3, 4, and 5 are now complete: Auth.js scaffolding exists, non-demo UI no longer exposes demo actor switching, API routes no longer trust client-provided `actorId` outside demo mode, developer/admin onboarding tooling exists for linking the first real user to an existing household, and the entire non-demo auth path can be smoke-tested locally without real SMTP. Demo mode is unchanged.
+HomeStock AI is moving from MVP `actorId` query-string switching to real authentication. Phases 1 through 6 are now complete: Auth.js scaffolding exists, non-demo UI no longer exposes demo actor switching, API routes no longer trust client-provided `actorId` outside demo mode, developer/admin onboarding tooling exists for linking the first real user to an existing household, the entire non-demo auth path can be smoke-tested locally without real SMTP, and Resend is wired up as the recommended production email provider. Demo mode is unchanged.
 
 ## Why actorId is demo-only
 
 `?actorId=...` and `?householdId=...` query parameters are how the demo lets QA testers "be" different household members without an account. In demo mode, API routes still honor those fields so seeded QA flows keep working. Outside demo mode, API routes ignore client-provided `actorId`, `requestedBy`, and `createdBy`; the current actor comes from the Auth.js session and the household membership row.
+
+## Phase 6 scope (Resend email provider)
+
+Phase 6 wires Auth.js's Resend provider as the recommended production email path and replaces the inline provider-selection code with a deterministic priority helper.
+
+In:
+
+- `next-auth/providers/resend` registered when `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM`, and `AUTH_SECRET` are set.
+- New env vars: `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM`. Sender address is never hardcoded.
+- `lib/auth/readiness.ts` exposes a `provider: "resend" | "smtp" | "dev-log" | "none"` field plus `unsafeProductionDevLog: boolean`. `authReadinessStatus()` returns the same shape from the live module.
+- Provider priority (non-demo only):
+  1. Resend (`AUTH_RESEND_KEY` + `AUTH_EMAIL_FROM` + `AUTH_SECRET`).
+  2. Dev-log (`AUTH_DEV_LOG_MAGIC_LINK="true"` + `AUTH_SECRET` + `NODE_ENV !== "production"`).
+  3. SMTP (`EMAIL_SERVER` + `EMAIL_FROM` + `AUTH_SECRET`) — kept as a fallback for legacy/local Mailpit setups.
+  4. None.
+- Production safety: when `AUTH_DEV_LOG_MAGIC_LINK=true` is detected with `NODE_ENV=production`, the dev-log provider is hard-disabled and `unsafeProductionDevLog` is set. `/sign-in` shows an "Unsafe configuration" panel and hides the form until the operator removes the flag.
+- `/sign-in` shows a "Provider: resend|dev-log|smtp" line and explicit dev-log mode copy when active.
+
+Out:
+
+- No production rollout. Phase 6 ships the wiring; the deployment flip itself is still future work.
+- No invite flow.
+- No schema changes.
+- No changes to API enforcement.
 
 ## Phase 5 scope (non-demo auth smoke)
 
@@ -139,13 +163,17 @@ Phase 5 (flip): a separate Vercel project or environment with `DEMO_MODE` and `N
 For non-demo deployments only. All optional in demo mode.
 
 ```env
-AUTH_SECRET=""        # Required by Auth.js. Generate with `openssl rand -base64 32`.
-AUTH_URL=""           # Public URL of the deployment (e.g. https://app.example.com).
-EMAIL_SERVER=""       # Nodemailer SMTP connection string.
-EMAIL_FROM=""         # The from address on magic-link emails.
+AUTH_SECRET=""           # Required by Auth.js. Generate with `openssl rand -base64 32`.
+AUTH_URL=""              # Public URL of the deployment (e.g. https://app.example.com).
+AUTH_RESEND_KEY=""       # Resend API key (recommended). Required for the Resend provider.
+AUTH_EMAIL_FROM=""       # Sender for magic-link emails (e.g. "HomeStock <auth@homestock.app>").
+
+# Legacy / fallback only. Used when Resend is not configured.
+EMAIL_SERVER=""          # Nodemailer SMTP DSN.
+EMAIL_FROM=""            # SMTP sender.
 ```
 
-If `EMAIL_SERVER` and `EMAIL_FROM` are missing, the email provider is not registered and `/sign-in` shows an "auth not configured" notice. This is the safe default for the current hosted demo.
+If neither Resend nor SMTP nor dev-log is configured, no email provider is registered and `/sign-in` shows an "auth not configured" notice. This is the safe default for the current hosted demo.
 
 ## Current limitations that remain after Phase 3
 

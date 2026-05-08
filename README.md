@@ -185,7 +185,7 @@ See [docs/current-limitations.md](docs/current-limitations.md).
 
 Key limitations:
 
-- MVP actor switching is not production authentication. For non-demo deployments, link a real user to a household with `npm run auth:link-user`. See [docs/auth-onboarding.md](docs/auth-onboarding.md).
+- MVP actor switching is not production authentication. For non-demo deployments, link a real user to a household with `npm run auth:link-user`, then sign in via the Auth.js Resend provider. See [docs/auth-onboarding.md](docs/auth-onboarding.md) and [docs/auth-readiness.md](docs/auth-readiness.md).
 - Grocery commerce is mock-only.
 - No real checkout, payment, or Swiggy order placement exists.
 - No email, SMS, WhatsApp, or push notifications.
