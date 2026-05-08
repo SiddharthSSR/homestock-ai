@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
+import { apiErrorResponse, assertSameOriginRequest, cartDraftHouseholdId, clientActorFromBody, requireApiActor } from "@/lib/auth/api-auth";
 import { approveCart } from "@/lib/services/cart-service";
-import { getDefaultActorId } from "@/lib/services/household-service";
-import { PermissionError } from "@/lib/services/permissions-service";
 
 export async function POST(request: Request, { params }: { params: Promise<{ cartId: string }> }) {
   try {
+    assertSameOriginRequest(request);
     const { cartId } = await params;
     const body = await request.json().catch(() => ({}));
-    const actorId = String(body.actorId || (await getDefaultActorId()));
-    const cart = await approveCart(cartId, actorId);
+    const householdId = await cartDraftHouseholdId(cartId);
+    const actor = await requireApiActor(householdId, clientActorFromBody(body));
+    const cart = await approveCart(cartId, actor.actorId);
     return NextResponse.json({ cart });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not approve cart draft." }, { status: error instanceof PermissionError ? 403 : 400 });
+    return apiErrorResponse(error, "Could not approve cart draft.");
   }
 }

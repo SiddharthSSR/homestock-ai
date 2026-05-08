@@ -7,10 +7,11 @@ HomeStock AI is an MVP intended for local product validation and demo workflows.
 - The current actor selector is MVP/dev behavior.
 - `actorId` query parameters are used for local role testing.
 - This is not production authentication.
-- Auth.js (NextAuth v5) scaffolding is in place behind a flag — see `docs/auth-readiness.md`. Phase 1 ships the schema, the `lib/auth/current-actor.ts` boundary helper, and a `/sign-in` page. Existing API routes do not enforce sessions yet.
+- Auth.js (NextAuth v5) scaffolding is in place behind a flag — see `docs/auth-readiness.md`. Phase 1 shipped the schema, the `lib/auth/current-actor.ts` boundary helper, and a `/sign-in` page.
 - Phase 2 hides the actor switcher and stops carrying `actorId` through links in non-demo mode, and adds sign-in / sign-out entry points to the app shell. Household management forms are paused outside demo mode until Phase 3.
-- Until Phase 3 lands, every mutating API route still trusts `body.actorId` / `searchParams.actorId`. Treat the hosted demo as untrusted-by-design.
-- `getDefaultActorId()` and `getDefaultHouseholdId()` in `lib/services/household-service.ts` are demo-only — they can silently mint a "Local Admin" user and a "My Household" if invoked in production. Hard-gating moves to Phase 3.
+- Phase 3 enforces server-side API actor resolution. Outside demo mode, API routes ignore client-provided `actorId`, `requestedBy`, and `createdBy`, and resolve the actor from the Auth.js session plus household membership.
+- Demo mode still intentionally honors `actorId` for seeded QA/demo flows. Treat the hosted demo as untrusted-by-design.
+- `getDefaultActorId()` and `getDefaultHouseholdId()` in `lib/services/household-service.ts` are demo utilities. API auth paths no longer rely on them outside demo mode.
 - Invitations, password reset, and account security remain future work.
 
 ## Commerce Provider

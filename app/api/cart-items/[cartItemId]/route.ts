@@ -1,34 +1,37 @@
 import { NextResponse } from "next/server";
+import { apiErrorResponse, assertSameOriginRequest, cartItemHouseholdId, clientActorFromBody, requireApiActor } from "@/lib/auth/api-auth";
 import { removeCartItem, updateCartItemQuantity } from "@/lib/services/cart-service";
-import { getDefaultActorId } from "@/lib/services/household-service";
-import { PermissionError } from "@/lib/services/permissions-service";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ cartItemId: string }> }) {
   try {
+    assertSameOriginRequest(request);
     const { cartItemId } = await params;
     const body = await request.json().catch(() => ({}));
-    const actorId = String(body.actorId || (await getDefaultActorId()));
+    const householdId = await cartItemHouseholdId(cartItemId);
+    const actor = await requireApiActor(householdId, clientActorFromBody(body));
     const quantity = body.quantity === null || body.quantity === "" || body.quantity === undefined ? null : Number(body.quantity);
 
     if (quantity !== null && (!Number.isFinite(quantity) || quantity < 0)) {
       return NextResponse.json({ error: "Quantity must be a positive number." }, { status: 400 });
     }
 
-    const item = await updateCartItemQuantity(cartItemId, actorId, quantity);
+    const item = await updateCartItemQuantity(cartItemId, actor.actorId, quantity);
     return NextResponse.json({ item });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not update cart item." }, { status: error instanceof PermissionError ? 403 : 400 });
+    return apiErrorResponse(error, "Could not update cart item.");
   }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ cartItemId: string }> }) {
   try {
+    assertSameOriginRequest(request);
     const { cartItemId } = await params;
     const body = await request.json().catch(() => ({}));
-    const actorId = String(body.actorId || (await getDefaultActorId()));
-    const cart = await removeCartItem(cartItemId, actorId);
+    const householdId = await cartItemHouseholdId(cartItemId);
+    const actor = await requireApiActor(householdId, clientActorFromBody(body));
+    const cart = await removeCartItem(cartItemId, actor.actorId);
     return NextResponse.json({ cart });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not remove cart item." }, { status: error instanceof PermissionError ? 403 : 400 });
+    return apiErrorResponse(error, "Could not remove cart item.");
   }
 }

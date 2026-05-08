@@ -1,22 +1,28 @@
 import { NextResponse } from "next/server";
-import { getDefaultActorId } from "@/lib/services/household-service";
+import { apiErrorResponse, assertSameOriginRequest, clientActorFromBody, requireApiActor } from "@/lib/auth/api-auth";
 import { dismissMemorySuggestion, getActiveMemoryDismissals, type MemorySuggestionSource, type MemorySuggestionType } from "@/lib/services/memory-service";
-import { PermissionError } from "@/lib/services/permissions-service";
 
 const suggestionTypes = new Set<MemorySuggestionType>(["DUE_SOON", "MONTHLY_STAPLE", "FREQUENT_ITEM", "PREFERENCE"]);
 const suggestionSources = new Set<MemorySuggestionSource>(["learned", "saved-pattern", "setup"]);
 
-export async function GET(_request: Request, { params }: { params: Promise<{ householdId: string }> }) {
-  const { householdId } = await params;
-  const dismissals = await getActiveMemoryDismissals(householdId);
-  return NextResponse.json({ dismissals });
+export async function GET(request: Request, { params }: { params: Promise<{ householdId: string }> }) {
+  try {
+    const { householdId } = await params;
+    const actorId = new URL(request.url).searchParams.get("actorId");
+    await requireApiActor(householdId, actorId);
+    const dismissals = await getActiveMemoryDismissals(householdId);
+    return NextResponse.json({ dismissals });
+  } catch (error) {
+    return apiErrorResponse(error, "Could not list memory dismissals.");
+  }
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ householdId: string }> }) {
   try {
+    assertSameOriginRequest(request);
     const { householdId } = await params;
     const body = await request.json();
-    const actorId = String(body.actorId || (await getDefaultActorId()));
+    const actor = await requireApiActor(householdId, clientActorFromBody(body));
     const suggestionKey = String(body.suggestionKey || "").trim();
     const canonicalName = String(body.canonicalName || "").trim();
     const displayName = String(body.displayName || "").trim();
@@ -42,7 +48,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ hou
 
     const dismissal = await dismissMemorySuggestion({
       householdId,
-      actorId,
+      actorId: actor.actorId,
       suggestionKey,
       canonicalName,
       displayName,
@@ -54,6 +60,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ hou
 
     return NextResponse.json({ dismissal }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not dismiss memory suggestion." }, { status: error instanceof PermissionError ? 403 : 400 });
+    return apiErrorResponse(error, "Could not dismiss memory suggestion.");
   }
 }
