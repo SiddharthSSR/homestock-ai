@@ -48,14 +48,20 @@ async function execute(prisma: PrismaClient, args: LinkUserArgs, nameFlagPresent
   });
 
   const resolution = chooseHousehold(candidates, { id: args.householdId, name: args.householdName });
-  if (!resolution.ok) {
-    if (resolution.reason === "ambiguous") {
-      const ids = resolution.matches.map((h) => h.id).join(", ");
-      console.error(
-        `error: multiple households named '${args.householdName}': ${ids}. Pass --householdId to disambiguate.`
-      );
-      return 1;
-    }
+  let household: { id: string; name: string };
+  let willCreateHousehold = false;
+  if (resolution.ok) {
+    household = resolution.household;
+  } else if (resolution.reason === "ambiguous") {
+    const ids = resolution.matches.map((h) => h.id).join(", ");
+    console.error(
+      `error: multiple households named '${args.householdName}': ${ids}. Pass --householdId to disambiguate.`
+    );
+    return 1;
+  } else if (args.createHouseholdIfMissing && args.householdName) {
+    willCreateHousehold = true;
+    household = { id: "(would be created)", name: args.householdName };
+  } else {
     console.error(
       args.householdId
         ? `error: household with id '${args.householdId}' not found.`
@@ -63,15 +69,16 @@ async function execute(prisma: PrismaClient, args: LinkUserArgs, nameFlagPresent
     );
     return 1;
   }
-  const household = resolution.household;
 
   const [existingUser, totalAdminCount] = await Promise.all([
     prisma.user.findUnique({ where: { email: args.email }, select: { id: true } }),
-    prisma.householdMember.count({ where: { householdId: household.id, role: "ADMIN" } })
+    willCreateHousehold
+      ? Promise.resolve(0)
+      : prisma.householdMember.count({ where: { householdId: household.id, role: "ADMIN" } })
   ]);
 
   let priorMembership: Pick<HouseholdMember, "role"> | null = null;
-  if (existingUser) {
+  if (existingUser && !willCreateHousehold) {
     priorMembership = await prisma.householdMember.findUnique({
       where: { householdId_userId: { householdId: household.id, userId: existingUser.id } },
       select: { role: true }
@@ -106,35 +113,48 @@ async function execute(prisma: PrismaClient, args: LinkUserArgs, nameFlagPresent
       isNewUser: !existingUser,
       isNewMembership: !priorMembership,
       role: args.role,
+      willCreateHousehold,
       dryRun: true
     });
     return 0;
   }
 
-  const [user, membership] = await prisma.$transaction(async (tx) => {
+  const [user, finalHousehold, membership] = await prisma.$transaction(async (tx) => {
     const upsertedUser: User = await tx.user.upsert({
       where: { email: args.email },
       update: nameFlagPresent ? { name: args.name } : {},
       create: { email: args.email, name: args.name }
     });
 
+    let liveHousehold: { id: string; name: string };
+    if (willCreateHousehold) {
+      const created = await tx.household.create({
+        data: { name: household.name, createdBy: upsertedUser.id, location: "Smoke" },
+        select: { id: true, name: true }
+      });
+      liveHousehold = created;
+    } else {
+      liveHousehold = household;
+    }
+
     const upsertedMembership: HouseholdMember = await tx.householdMember.upsert({
-      where: { householdId_userId: { householdId: household.id, userId: upsertedUser.id } },
+      where: { householdId_userId: { householdId: liveHousehold.id, userId: upsertedUser.id } },
       update: { role: args.role },
-      create: { householdId: household.id, userId: upsertedUser.id, role: args.role }
+      create: { householdId: liveHousehold.id, userId: upsertedUser.id, role: args.role }
     });
 
-    return [upsertedUser, upsertedMembership] as const;
+    return [upsertedUser, liveHousehold, upsertedMembership] as const;
   });
 
   printSummary({
-    household,
+    household: finalHousehold,
     userId: user.id,
     userEmail: user.email ?? args.email,
     userName: user.name,
     isNewUser: !existingUser,
     isNewMembership: !priorMembership,
     role: membership.role,
+    willCreateHousehold,
     dryRun: false
   });
 
@@ -158,6 +178,7 @@ type SummaryInput = {
   isNewUser: boolean;
   isNewMembership: boolean;
   role: LinkUserArgs["role"];
+  willCreateHousehold: boolean;
   dryRun: boolean;
 };
 
@@ -165,17 +186,18 @@ function printSummary(input: SummaryInput) {
   const verb = input.dryRun ? "would link" : "linked";
   const userVerb = input.isNewUser ? "create" : "update";
   const memberVerb = input.isNewMembership ? "new" : "existing";
+  const householdVerb = input.willCreateHousehold ? (input.dryRun ? "would create" : "create") : "existing";
   console.log("");
   console.log(`✓ ${verb} ${input.userName} <${input.userEmail}> to '${input.household.name}'`);
   console.log(`  user        id=${input.userId} (${userVerb})`);
-  console.log(`  household   id=${input.household.id}`);
+  console.log(`  household   id=${input.household.id} (${householdVerb})`);
   console.log(`  membership  role=${input.role} (${memberVerb})`);
   if (input.dryRun) {
     console.log("");
     console.log("dry-run: no changes written.");
   } else {
     console.log("");
-    console.log("Sign in via /sign-in once AUTH_SECRET, EMAIL_SERVER, and EMAIL_FROM are set on the deployment.");
+    console.log("Sign in via /sign-in once auth env vars (AUTH_SECRET + provider) are set.");
   }
 }
 

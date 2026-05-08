@@ -16,6 +16,7 @@ export type LinkUserArgs = {
   role: LinkUserRole;
   householdId?: string;
   householdName?: string;
+  createHouseholdIfMissing: boolean;
   dryRun: boolean;
   allowDemo: boolean;
   allowFixture: boolean;
@@ -40,6 +41,7 @@ const ArgSchema = z
     role: RoleEnum,
     householdId: z.string().min(1).optional(),
     householdName: z.string().min(1).optional(),
+    createHouseholdIfMissing: z.boolean(),
     dryRun: z.boolean(),
     allowDemo: z.boolean(),
     allowFixture: z.boolean(),
@@ -48,6 +50,9 @@ const ArgSchema = z
   })
   .refine((v) => v.help || Boolean(v.householdId) !== Boolean(v.householdName), {
     message: "exactly one of --householdId or --householdName is required"
+  })
+  .refine((v) => !(v.createHouseholdIfMissing && v.householdId), {
+    message: "--create-household-if-missing requires --householdName, not --householdId"
   });
 
 type RawArgs = {
@@ -56,6 +61,7 @@ type RawArgs = {
   role?: string;
   householdId?: string;
   householdName?: string;
+  createHouseholdIfMissing: boolean;
   dryRun: boolean;
   allowDemo: boolean;
   allowFixture: boolean;
@@ -75,12 +81,14 @@ const BOOLEAN_KEYS = new Set([
   "--allow-demo",
   "--allow-fixture",
   "--allow-last-admin-demote",
+  "--create-household-if-missing",
   "--help",
   "-h"
 ]);
 
 function readArgv(argv: string[]): { raw: RawArgs; error?: string } {
   const raw: RawArgs = {
+    createHouseholdIfMissing: false,
     dryRun: false,
     allowDemo: false,
     allowFixture: false,
@@ -95,6 +103,7 @@ function readArgv(argv: string[]): { raw: RawArgs; error?: string } {
       else if (token === "--allow-demo") raw.allowDemo = true;
       else if (token === "--allow-fixture") raw.allowFixture = true;
       else if (token === "--allow-last-admin-demote") raw.allowLastAdminDemote = true;
+      else if (token === "--create-household-if-missing") raw.createHouseholdIfMissing = true;
       else if (token === "--help" || token === "-h") raw.help = true;
       continue;
     }
@@ -133,6 +142,7 @@ export function parseLinkUserArgs(argv: string[]): ParseResult {
         role: (raw.role as LinkUserRole) ?? "ADMIN",
         householdId: raw.householdId,
         householdName: raw.householdName,
+        createHouseholdIfMissing: raw.createHouseholdIfMissing,
         dryRun: raw.dryRun,
         allowDemo: raw.allowDemo,
         allowFixture: raw.allowFixture,
@@ -161,6 +171,7 @@ export function parseLinkUserArgs(argv: string[]): ParseResult {
       role: v.role,
       householdId: v.householdId,
       householdName: v.householdName,
+      createHouseholdIfMissing: v.createHouseholdIfMissing,
       dryRun: v.dryRun,
       allowDemo: v.allowDemo,
       allowFixture: v.allowFixture,
@@ -247,7 +258,7 @@ export function formatSafetyError(error: SafetyError): string {
 
 export const USAGE = `Usage: tsx scripts/link-user.ts --email <email> --role ADMIN|MEMBER|COOK \\
        (--householdId <id> | --householdName "<name>") \\
-       [--name "<name>"] [--dry-run] \\
+       [--name "<name>"] [--dry-run] [--create-household-if-missing] \\
        [--allow-demo] [--allow-fixture] [--allow-last-admin-demote]
 
 Required:
@@ -259,10 +270,12 @@ Required:
 Optional:
   --name              Display name. Defaults to email local-part for new users.
   --dry-run           Plan only; no writes.
+  --create-household-if-missing  Create the household when --householdName does not match. Requires --householdName.
   --allow-demo        Required when DEMO_MODE/NEXT_PUBLIC_DEMO_MODE is true.
   --allow-fixture     Required when targeting a seeded QA/Demo household.
   --allow-last-admin-demote  Required to drop the only remaining household ADMIN.
 
 Examples:
   tsx scripts/link-user.ts --email me@example.com --role ADMIN --householdName "Family"
+  tsx scripts/link-user.ts --email me@example.com --role ADMIN --householdName "Smoke" --create-household-if-missing
   tsx scripts/link-user.ts --email me@example.com --role MEMBER --householdId hh_123 --dry-run`;

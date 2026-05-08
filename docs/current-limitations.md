@@ -13,6 +13,7 @@ HomeStock AI is an MVP intended for local product validation and demo workflows.
 - Demo mode still intentionally honors `actorId` for seeded QA/demo flows. Treat the hosted demo as untrusted-by-design.
 - `getDefaultActorId()` and `getDefaultHouseholdId()` in `lib/services/household-service.ts` are demo utilities. API auth paths no longer rely on them outside demo mode.
 - User onboarding for non-demo deployments is via `scripts/link-user.ts` only. There is no invite flow and no self-serve signup UI. See `docs/auth-onboarding.md`.
+- Non-demo auth has been smoke-tested locally end-to-end with `AUTH_DEV_LOG_MAGIC_LINK=true` (see `docs/non-demo-auth-smoke.md`). There is no production deployment of non-demo mode yet.
 - Invitations, password reset, and account security remain future work.
 
 ## Commerce Provider
