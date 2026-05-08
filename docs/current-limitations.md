@@ -12,6 +12,7 @@ HomeStock AI is an MVP intended for local product validation and demo workflows.
 - Phase 3 enforces server-side API actor resolution. Outside demo mode, API routes ignore client-provided `actorId`, `requestedBy`, and `createdBy`, and resolve the actor from the Auth.js session plus household membership.
 - Demo mode still intentionally honors `actorId` for seeded QA/demo flows. Treat the hosted demo as untrusted-by-design.
 - `getDefaultActorId()` and `getDefaultHouseholdId()` in `lib/services/household-service.ts` are demo utilities. API auth paths no longer rely on them outside demo mode.
+- User onboarding for non-demo deployments is via `scripts/link-user.ts` only. There is no invite flow and no self-serve signup UI. See `docs/auth-onboarding.md`.
 - Invitations, password reset, and account security remain future work.
 
 ## Commerce Provider

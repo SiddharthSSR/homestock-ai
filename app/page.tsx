@@ -1,4 +1,5 @@
-import { AlertCircle, CheckCircle2, IndianRupee, ListChecks } from "lucide-react";
+import { AlertCircle, CheckCircle2, IndianRupee, KeyRound, ListChecks } from "lucide-react";
+import { auth } from "@/lib/auth/config";
 import { AddMemorySuggestionButton } from "@/components/AddMemorySuggestionButton";
 import { CategorySection } from "@/components/CategorySection";
 import { CurrentActorSwitcher } from "@/components/CurrentActorSwitcher";
@@ -39,6 +40,24 @@ const demoActivity = [
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ householdId?: string; actorId?: string }> }) {
   const params = await searchParams;
   const demoMode = isDemoModeEnabled();
+
+  if (!demoMode) {
+    const session = await auth().catch(() => null);
+    const sessionUserId = session?.user?.id ?? null;
+    if (sessionUserId) {
+      const membershipCount = await prisma.householdMember.count({ where: { userId: sessionUserId } });
+      if (membershipCount === 0) {
+        return (
+          <EmptyState
+            icon={KeyRound}
+            title="You are signed in, but you are not linked to a household yet"
+            description="Ask a household admin to link your account, or run `npm run auth:link-user` if you have CLI access. See docs/auth-onboarding.md for examples."
+          />
+        );
+      }
+    }
+  }
+
   const households = await prisma.household.findMany({ orderBy: { createdAt: "asc" } });
   const matchedHousehold = params.householdId ? households.find((entry) => entry.id === params.householdId) ?? null : null;
   const selectedHousehold = matchedHousehold ?? (demoMode ? pickDemoDefaultHousehold(households) : resolveSelectedHousehold(households, null));

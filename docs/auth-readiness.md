@@ -1,10 +1,29 @@
 # Auth Readiness
 
-HomeStock AI is moving from MVP `actorId` query-string switching to real authentication. Phases 1, 2, and 3 are now complete: Auth.js scaffolding exists, non-demo UI no longer exposes demo actor switching, and API routes no longer trust client-provided `actorId` outside demo mode. Demo mode is unchanged.
+HomeStock AI is moving from MVP `actorId` query-string switching to real authentication. Phases 1, 2, 3, and 4 are now complete: Auth.js scaffolding exists, non-demo UI no longer exposes demo actor switching, API routes no longer trust client-provided `actorId` outside demo mode, and developer/admin onboarding tooling exists for linking the first real user to an existing household. Demo mode is unchanged.
 
 ## Why actorId is demo-only
 
 `?actorId=...` and `?householdId=...` query parameters are how the demo lets QA testers "be" different household members without an account. In demo mode, API routes still honor those fields so seeded QA flows keep working. Outside demo mode, API routes ignore client-provided `actorId`, `requestedBy`, and `createdBy`; the current actor comes from the Auth.js session and the household membership row.
+
+## Phase 4 scope (onboarding tooling)
+
+Phase 4 ships a single developer/admin script and the matching docs. No UI.
+
+In:
+
+- `scripts/link-user.ts` — upserts a `User` by email and a `HouseholdMember` on `(householdId, userId)` inside one Prisma transaction. Lowercases email, defaults `--name` to the email local-part for new users, leaves `name` untouched for existing users unless `--name` is passed explicitly.
+- npm script alias `auth:link-user`. Pass arguments after `--` (e.g. `npm run auth:link-user -- --email me@example.com --role ADMIN --householdName "Family"`).
+- Three opt-in safety guards: `--allow-demo`, `--allow-fixture`, `--allow-last-admin-demote`.
+- `--dry-run` for plan-only inspection.
+- New runbook: `docs/auth-onboarding.md`.
+- Optional non-demo "no household membership yet" empty state on the homepage when a signed-in user has zero memberships. Tells the user to ask an admin or run `npm run auth:link-user`.
+
+Out:
+
+- No invite UI. No email send on link.
+- No household creation. The script errors if the target does not exist.
+- No flip to non-demo on the hosted Vercel project.
 
 ## Phase 3 scope (API enforcement)
 
