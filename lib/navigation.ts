@@ -3,6 +3,16 @@ export type PreservedNavigationParams = {
   householdId?: string | null;
 };
 
+// In demo mode the URL-based actorId is the demo identity, so it must
+// propagate through navigation. In non-demo mode actorId is untrusted input
+// and must be dropped from links so it never reaches the server again.
+export function selectPreservedParams(input: { actorId?: string | null; householdId?: string | null; demoMode: boolean }): PreservedNavigationParams {
+  return {
+    actorId: input.demoMode ? input.actorId ?? null : null,
+    householdId: input.householdId ?? null
+  };
+}
+
 export function hrefWithPreservedParams(href: string, params: PreservedNavigationParams) {
   if (!href.startsWith("/")) return href;
 

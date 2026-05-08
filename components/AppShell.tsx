@@ -1,8 +1,14 @@
+import Link from "next/link";
 import { BottomNav } from "./BottomNav";
 import { PreservedQueryLink } from "./PreservedQueryLink";
+import { SignOutButton } from "./SignOutButton";
+import { auth } from "@/lib/auth/config";
+import { isDemoModeEnabled } from "@/lib/household-selection";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+export async function AppShell({ children }: { children: React.ReactNode }) {
+  const isDemoMode = isDemoModeEnabled();
+  const session = isDemoMode ? null : await auth().catch(() => null);
+  const sessionUser = session?.user ?? null;
 
   return (
     <div className="min-h-screen text-cocoa">
@@ -37,6 +43,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <PreservedQueryLink className="rounded-md px-3 py-2 text-bark hover:bg-paper" href="/integrations/swiggy">
               Swiggy
             </PreservedQueryLink>
+            {!isDemoMode ? (
+              sessionUser ? (
+                <div className="ml-2 flex items-center gap-2 border-l border-cocoa/10 pl-3">
+                  <span className="text-xs text-bark">
+                    Signed in as <span className="font-semibold text-cocoa">{sessionUser.name ?? sessionUser.email ?? "you"}</span>
+                  </span>
+                  <SignOutButton />
+                </div>
+              ) : (
+                <Link
+                  href="/sign-in"
+                  className="ml-2 rounded-md bg-forest px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-paper hover:bg-cocoa"
+                >
+                  Sign in
+                </Link>
+              )
+            ) : null}
           </div>
         </nav>
         {isDemoMode ? (

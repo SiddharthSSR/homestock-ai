@@ -3,7 +3,7 @@ import { HouseholdSwitcher } from "@/components/HouseholdSwitcher";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusPill } from "@/components/StatusPill";
 import { SummaryCard } from "@/components/SummaryCard";
-import { resolveSelectedHousehold } from "@/lib/household-selection";
+import { isDemoModeEnabled, resolveSelectedHousehold } from "@/lib/household-selection";
 import { prisma } from "@/lib/prisma";
 import { getDefaultHouseholdId, resolveCurrentActorId } from "@/lib/services/household-service";
 import { getHouseholdRole, roleCapabilities } from "@/lib/services/permissions-service";
@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HouseholdPage({ searchParams }: { searchParams: Promise<{ householdId?: string; actorId?: string }> }) {
   const params = await searchParams;
+  const demoMode = isDemoModeEnabled();
   const households = await prisma.household.findMany({
     include: {
       members: {
@@ -63,7 +64,7 @@ export default async function HouseholdPage({ searchParams }: { searchParams: Pr
         <SummaryCard label="Cook helpers" value={cookCount} detail="Simple request mode" tone="sage" />
       </section>
 
-      {permissions.canManageHousehold ? (
+      {permissions.canManageHousehold && demoMode ? (
         <section className="rounded-[1.5rem] border border-cocoa/10 bg-paper p-5 shadow-editorial">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-bark">Create household</p>
           <form action="/api/households" method="post" className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
@@ -72,6 +73,11 @@ export default async function HouseholdPage({ searchParams }: { searchParams: Pr
             <input type="hidden" name="createdBy" value={actorId} />
             <button className="rounded-md bg-forest px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-paper hover:bg-cocoa">Create</button>
           </form>
+        </section>
+      ) : permissions.canManageHousehold ? (
+        <section className="rounded-lg border border-cocoa/10 bg-paper p-5 text-sm text-bark shadow-panel">
+          <p className="font-semibold text-cocoa">Household creation is paused</p>
+          <p className="mt-1">Server-side auth enforcement lands in Phase 3. Until then, household creation is disabled outside demo mode to avoid silently using fallback admin identities.</p>
         </section>
       ) : (
         <section className="rounded-lg border border-cocoa/10 bg-paper p-5 text-sm font-semibold text-bark shadow-panel">Only household admins can manage household settings.</section>
@@ -86,7 +92,7 @@ export default async function HouseholdPage({ searchParams }: { searchParams: Pr
                 <h2 className="font-editorial mt-2 text-4xl font-semibold text-cocoa">{household.name}</h2>
                 <p className="mt-1 text-sm text-bark">{household.location ?? "No location set"}</p>
               </div>
-              {permissions.canManageHousehold && household.id === householdId ? (
+              {permissions.canManageHousehold && household.id === householdId && demoMode ? (
                 <form action={`/api/households/${household.id}/members`} method="post" className="flex flex-wrap gap-2">
                   <input type="hidden" name="actorId" value={actorId} />
                   <select name="userId" aria-label="Household member" className="rounded-md border border-cocoa/15 bg-cream px-3 py-2 text-sm text-cocoa">
@@ -103,6 +109,8 @@ export default async function HouseholdPage({ searchParams }: { searchParams: Pr
                   </select>
                   <button className="rounded-md border border-cocoa/20 bg-cream px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-cocoa">Add member</button>
                 </form>
+              ) : permissions.canManageHousehold && household.id === householdId ? (
+                <p className="max-w-sm text-sm text-bark">Member management is read-only outside demo mode until session-based auth lands in Phase 3.</p>
               ) : household.id === householdId ? (
                 <p className="max-w-sm text-sm font-semibold text-bark">Only household admins can manage members for this household.</p>
               ) : (

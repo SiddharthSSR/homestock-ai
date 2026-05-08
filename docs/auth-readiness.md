@@ -17,7 +17,24 @@ Why Auth.js:
 - OSS, no per-MAU billing, low vendor lock-in.
 - Magic link avoids password storage and OAuth consent screens for an early-stage demo.
 
-## Phase 1 scope (this PR)
+## Phase 2 scope (UI gating cleanup)
+
+Phase 2 ships UI-only changes that prepare the app for non-demo deployments. No API authorization changes.
+
+In:
+
+- `CurrentActorSwitcher` returns `null` in non-demo mode. The component-level gate covers all eight pages that render it (`app/page.tsx`, `app/household/page.tsx`, `app/grocery/page.tsx`, `app/approve/page.tsx`, `app/cart/page.tsx`, `app/memory/page.tsx`, `app/notifications/page.tsx`, `app/add/page.tsx`).
+- `PreservedQueryLink` no longer carries `actorId` through navigation in non-demo mode. The gate uses a new pure helper `selectPreservedParams` (in `lib/navigation.ts`) so the rule is unit-testable. `householdId` is still preserved in both modes — users may belong to multiple households.
+- `AppShell` shows a "Sign in" link when in non-demo mode without a session, and a "Signed in as {name}" indicator + sign-out button when a session exists. Demo mode keeps the existing demo banner and shows neither.
+- `app/household/page.tsx` no longer renders the `actorId` hidden input or the household-create / add-member forms outside demo mode. Those forms still target unmigrated APIs that trust client `actorId`; hiding them in non-demo avoids silently using the demo fallback admin identity. A short notice replaces them: "auth enforcement coming in Phase 3".
+
+Out (still Phase 3):
+
+- API routes still trust `body.actorId` / `searchParams.actorId`. Nothing in this PR changes that.
+- `getDefaultActorId` / `getDefaultHouseholdId` are still soft-comments only.
+- No CSRF middleware, no GET-route membership checks, no `/api/households` filtering.
+
+## Phase 1 scope
 
 What is in:
 
