@@ -12,6 +12,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
+    "auth:link-user": "tsx scripts/link-user.ts",
     "vercel-build": "prisma generate && next build"
   },
   "dependencies": {

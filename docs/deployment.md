@@ -108,6 +108,10 @@ If the direct endpoint is unreachable (for example `P1001` on a suspended Neon e
 
 If you have an older local database that was created before migrations were committed, it may not have Prisma migration history. Do not reset it silently. Back up any local data you care about, or use a fresh database when validating migration deploy behavior.
 
+## Linking the first real user (non-demo)
+
+For non-demo deployments, link the first real user to an existing household with `scripts/link-user.ts`. See `docs/auth-onboarding.md` for the full runbook and safety guards. The same env-pull pattern applies: pass `DATABASE_URL` inline, do not export it, and delete `.env.production.local` when done.
+
 ## Hosted Demo Seed Data
 
 Seed the hosted demo database manually after migrations, using the runtime (pooled) `DATABASE_URL`:
