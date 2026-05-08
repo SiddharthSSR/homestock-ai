@@ -246,7 +246,10 @@ Sign-in submissions now arrive in Mailpit's web UI at `http://localhost:8025`. C
 ## Troubleshooting
 
 **`/sign-in` shows "Auth not configured" instead of the form.**
-`AUTH_SECRET` is unset, or neither `AUTH_DEV_LOG_MAGIC_LINK="true"` nor a real SMTP pair (`EMAIL_SERVER` + `EMAIL_FROM`) is set. Confirm `.env.local` is being read (Next.js loads it automatically; restart `npm run dev` after editing).
+`AUTH_SECRET` is unset, or no provider is configured. Acceptable provider configs: `AUTH_DEV_LOG_MAGIC_LINK="true"` (local only), `AUTH_RESEND_KEY` + `AUTH_EMAIL_FROM` (Resend), or `EMAIL_SERVER` + `EMAIL_FROM` (SMTP / Mailpit). Confirm `.env.local` is being read (Next.js loads it automatically; restart `npm run dev` after editing).
+
+**`/sign-in` shows "Unsafe configuration".**
+`AUTH_DEV_LOG_MAGIC_LINK="true"` was detected with `NODE_ENV="production"`. Dev-log mode is hard-disabled in production to avoid writing magic links to deployment logs. Remove the flag from your env and configure Resend or SMTP for the deployment.
 
 **Sign-in form submits but no `[auth]` line appears in the terminal.**
 The `dev` process picked up an older `config.ts` build. Stop `npm run dev`, confirm the env file has `AUTH_DEV_LOG_MAGIC_LINK="true"`, restart.

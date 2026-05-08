@@ -49,6 +49,30 @@ SWIGGY_BUILDERS_REDIRECT_URI=""
 
 Swiggy placeholders are optional and unused in mock mode. Do not configure them for the hosted demo unless official Builders Club access and approved implementation work exist.
 
+### Auth (non-demo deployments)
+
+The hosted demo runs in demo mode and does not need auth env vars. For a separate non-demo deployment (real users sign in via magic link), set:
+
+```env
+DEMO_MODE="false"
+NEXT_PUBLIC_DEMO_MODE="false"
+AUTH_SECRET="<openssl rand -base64 32>"
+AUTH_URL="https://your-prod-url.vercel.app"
+AUTH_RESEND_KEY="re_..."
+AUTH_EMAIL_FROM="HomeStock <auth@your-verified-domain.com>"
+```
+
+Resend setup:
+
+1. Create an account at [resend.com](https://resend.com).
+2. Verify a sending domain (or subdomain) — Resend's UI walks through DNS records (SPF, DKIM, optionally DMARC).
+3. Create an API key with sending access.
+4. Set `AUTH_RESEND_KEY` and `AUTH_EMAIL_FROM` in Vercel project settings (Production environment).
+
+Do **not** set `AUTH_DEV_LOG_MAGIC_LINK` on Vercel. That flag is for local smoke testing only and is hard-disabled when `NODE_ENV="production"`. If it accidentally gets set on a production build, `/sign-in` shows an "Unsafe configuration" warning and refuses to use dev-log.
+
+For local development without Resend, see `docs/non-demo-auth-smoke.md`.
+
 ## Build Command
 
 Use the default Vercel install command.

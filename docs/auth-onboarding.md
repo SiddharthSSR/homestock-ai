@@ -19,7 +19,7 @@ Do not use this against a demo-mode database unless you are testing the script i
 The script writes directly to the database. Make sure:
 
 - The target household already exists. The script will not create households.
-- For real sign-in to work after linking, the deployment has `AUTH_SECRET`, `EMAIL_SERVER` (Nodemailer SMTP DSN), and `EMAIL_FROM` set.
+- For real sign-in to work after linking, the deployment has `AUTH_SECRET` set plus an email provider — recommended: `AUTH_RESEND_KEY` + `AUTH_EMAIL_FROM` (Resend); legacy fallback: `EMAIL_SERVER` + `EMAIL_FROM` (SMTP). See `docs/auth-readiness.md`.
 - You are running on a node version that matches the repo (see `.nvmrc` if present).
 - You have a `DATABASE_URL` for the target environment.
 
@@ -149,7 +149,7 @@ Does not:
 
 - No invite flow. The user does not receive an email until they go to `/sign-in` and request a magic link themselves.
 - No self-serve onboarding UI. New members must be linked by someone with shell access to the database URL.
-- Sign-in only works when the deployment has `AUTH_SECRET`, `EMAIL_SERVER`, and `EMAIL_FROM` set. Until then the script will still link the user, but `/sign-in` will show "auth not configured".
+- Sign-in only works when the deployment has `AUTH_SECRET` plus an email provider configured (Resend via `AUTH_RESEND_KEY` + `AUTH_EMAIL_FROM`, or SMTP via `EMAIL_SERVER` + `EMAIL_FROM`). Until then the script will still link the user, but `/sign-in` will show "auth not configured".
 - Demo mode still uses `actorId`. The script is a no-op for the hosted demo experience.
 - This is developer/admin tooling; it is not exposed in the app.
 
