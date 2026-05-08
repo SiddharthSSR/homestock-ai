@@ -197,7 +197,7 @@ function printSummary(input: SummaryInput) {
     console.log("dry-run: no changes written.");
   } else {
     console.log("");
-    console.log("Sign in via /sign-in once auth env vars (AUTH_SECRET + provider) are set.");
+    console.log("Sign in via /sign-in.");
   }
 }
 

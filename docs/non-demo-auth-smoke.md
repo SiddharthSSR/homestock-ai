@@ -179,7 +179,21 @@ fetch("http://localhost:3000/api/households/<smoke-household-id>/grocery-request
 
 **8d. Origin guard.**
 
-Same as 8c but drop the `Origin` header. (Browsers always send `Origin` on `POST`, so use `curl`.)
+The guard rejects cross-site `Origin` values; it intentionally allows requests with no `Origin` header at all (so non-browser API clients like curl, server-to-server, and mobile aren't blocked). Browsers always send `Origin` for `POST`, so the cross-site case is what matters in production.
+
+Spoof a cross-site `Origin`:
+
+```bash
+curl -i -X POST "http://localhost:3000/api/households/<smoke-household-id>/grocery-requests" \
+  -H "Content-Type: application/json" \
+  -H "Origin: https://evil.example" \
+  -H "Cookie: authjs.session-token=<paste from DevTools>" \
+  -d '{"rawText":"tomato"}'
+```
+
+- **Expected:** `403` with the origin-mismatch error.
+
+For comparison, the same request with no `Origin` header at all returns `201` by design:
 
 ```bash
 curl -i -X POST "http://localhost:3000/api/households/<smoke-household-id>/grocery-requests" \
@@ -188,7 +202,7 @@ curl -i -X POST "http://localhost:3000/api/households/<smoke-household-id>/groce
   -d '{"rawText":"tomato"}'
 ```
 
-- **Expected:** `403` with the origin-mismatch error.
+- **Expected:** `201`. Missing `Origin` is allowed (see [lib/auth/api-auth.ts](../lib/auth/api-auth.ts) `assertSameOriginRequest`).
 
 **8e. `/api/households` filtered to memberships.**
 
