@@ -8,6 +8,7 @@ HomeStock AI is an MVP intended for local product validation and demo workflows.
 - `actorId` query parameters are used for local role testing.
 - This is not production authentication.
 - Auth.js (NextAuth v5) scaffolding is in place behind a flag — see `docs/auth-readiness.md`. Phase 1 ships the schema, the `lib/auth/current-actor.ts` boundary helper, and a `/sign-in` page. Existing API routes do not enforce sessions yet.
+- Phase 2 hides the actor switcher and stops carrying `actorId` through links in non-demo mode, and adds sign-in / sign-out entry points to the app shell. Household management forms are paused outside demo mode until Phase 3.
 - Until Phase 3 lands, every mutating API route still trusts `body.actorId` / `searchParams.actorId`. Treat the hosted demo as untrusted-by-design.
 - `getDefaultActorId()` and `getDefaultHouseholdId()` in `lib/services/household-service.ts` are demo-only — they can silently mint a "Local Admin" user and a "My Household" if invoked in production. Hard-gating moves to Phase 3.
 - Invitations, password reset, and account security remain future work.

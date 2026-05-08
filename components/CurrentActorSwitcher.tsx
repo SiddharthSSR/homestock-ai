@@ -8,7 +8,13 @@ type ActorOption = {
   };
 };
 
+// Demo-only switcher. NEXT_PUBLIC_DEMO_MODE is inlined at build, so the
+// component is tree-shaken to nothing in non-demo bundles.
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+
 export function CurrentActorSwitcher({ members, currentActorId }: { members: ActorOption[]; currentActorId: string }) {
+  if (!isDemoMode) return null;
+
   function onChange(value: string) {
     const url = new URL(window.location.href);
     url.searchParams.set("actorId", value);
