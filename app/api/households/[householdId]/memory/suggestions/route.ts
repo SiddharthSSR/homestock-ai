@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
+import { apiErrorResponse, assertSameOriginRequest, clientActorFromBody, requireApiActor } from "@/lib/auth/api-auth";
 import { serializeGroceryItems } from "@/lib/grocery/serialize";
 import { addGroceryRequests } from "@/lib/services/grocery-service";
-import { getDefaultActorId } from "@/lib/services/household-service";
-import { assertHouseholdPermission, PermissionError } from "@/lib/services/permissions-service";
+import { assertHouseholdPermission } from "@/lib/services/permissions-service";
 
 export async function POST(request: Request, { params }: { params: Promise<{ householdId: string }> }) {
   try {
+    assertSameOriginRequest(request);
     const { householdId } = await params;
     const body = await request.json();
-    const actorId = String(body.actorId || (await getDefaultActorId()));
+    const actor = await requireApiActor(householdId, clientActorFromBody(body));
+    const actorId = actor.actorId;
     await assertHouseholdPermission(householdId, actorId, "memory:add-suggestion");
 
     const displayName = String(body.displayName || "").trim();
@@ -40,6 +42,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ hou
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not add memory suggestion." }, { status: error instanceof PermissionError ? 403 : 400 });
+    return apiErrorResponse(error, "Could not add memory suggestion.");
   }
 }

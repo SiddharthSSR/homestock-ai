@@ -1,10 +1,40 @@
 # Auth Readiness
 
-HomeStock AI is moving from MVP `actorId` query-string switching to real authentication. This document covers Phase 1 only — the scaffolding is in place but no existing API route yet enforces sessions. Demo mode is unchanged.
+HomeStock AI is moving from MVP `actorId` query-string switching to real authentication. Phases 1, 2, and 3 are now complete: Auth.js scaffolding exists, non-demo UI no longer exposes demo actor switching, and API routes no longer trust client-provided `actorId` outside demo mode. Demo mode is unchanged.
 
 ## Why actorId is demo-only
 
-`?actorId=...` and `?householdId=...` query parameters are how the demo lets QA testers "be" different household members without an account. Server-side, every API route currently trusts `body.actorId` or `searchParams.actorId` and runs the household role check against that user. This is fine for a hosted demo (anyone can already see the seeded data), but it cannot ship as a real product because any client could claim to be the household ADMIN by typing a different `actorId`.
+`?actorId=...` and `?householdId=...` query parameters are how the demo lets QA testers "be" different household members without an account. In demo mode, API routes still honor those fields so seeded QA flows keep working. Outside demo mode, API routes ignore client-provided `actorId`, `requestedBy`, and `createdBy`; the current actor comes from the Auth.js session and the household membership row.
+
+## Phase 3 scope (API enforcement)
+
+Phase 3 wires the API layer to `requireCurrentActor`.
+
+In:
+
+- Centralized API auth handling in `lib/auth/api-auth.ts`.
+- Non-demo API mutations ignore `body.actorId`, `body.requestedBy`, and `body.createdBy`.
+- Household-scoped API routes call `requireCurrentActor(householdId)`.
+- Entity-scoped routes first resolve the parent household:
+  - `GroceryRequest -> householdId`
+  - `CartDraft -> householdId`
+  - `CartItem -> CartDraft -> householdId`
+- `GET /api/households` returns all households in demo mode, but only session memberships in non-demo mode.
+- Household-scoped GET routes now require membership in non-demo mode.
+- Mutating API routes include a lightweight same-origin guard for `POST`, `PATCH`, and `DELETE`.
+- Auth and permission failures return JSON responses:
+  - `401` when no session exists,
+  - `403` when the user is not a household member, lacks role permission, or sends an invalid origin,
+  - `400` for missing household context,
+  - `404` for missing parent entities.
+
+Out:
+
+- No invite flow.
+- No production onboarding flow.
+- No link-user script.
+- No deployment flip to non-demo mode.
+- No Swiggy, checkout, payment, or notification changes.
 
 ## Recommended approach
 
@@ -28,11 +58,9 @@ In:
 - `AppShell` shows a "Sign in" link when in non-demo mode without a session, and a "Signed in as {name}" indicator + sign-out button when a session exists. Demo mode keeps the existing demo banner and shows neither.
 - `app/household/page.tsx` no longer renders the `actorId` hidden input or the household-create / add-member forms outside demo mode. Those forms still target unmigrated APIs that trust client `actorId`; hiding them in non-demo avoids silently using the demo fallback admin identity. A short notice replaces them: "auth enforcement coming in Phase 3".
 
-Out (still Phase 3):
+Out:
 
-- API routes still trust `body.actorId` / `searchParams.actorId`. Nothing in this PR changes that.
-- `getDefaultActorId` / `getDefaultHouseholdId` are still soft-comments only.
-- No CSRF middleware, no GET-route membership checks, no `/api/households` filtering.
+- Production onboarding, invitations, and account linking remain future work.
 
 ## Phase 1 scope
 
@@ -48,7 +76,6 @@ What is in:
 
 What is **not** in:
 
-- No existing API route is wired to `requireCurrentActor` yet — that's Phase 3.
 - No invite flow, no admin onboarding UI, no household picker change.
 - No Swiggy, no payments.
 - No global middleware.
@@ -61,15 +88,11 @@ What is **not** in:
 - `/sign-in` shows a "demo mode" notice instead of the form.
 - The hosted Vercel demo (`DEMO_MODE=true`, `NEXT_PUBLIC_DEMO_MODE=true`) is untouched. The demo banner, actor switcher, seeded QA households, and `?actorId=` URL behavior all continue to work exactly as before.
 
-## Future Phase 2/3 enforcement plan
+## Remaining future phases
 
-Phase 2 (UI gating): hide `CurrentActorSwitcher` and stop preserving `actorId` in `PreservedQueryLink` when not in demo mode; add sign-in/sign-out entry points to `AppShell`.
+Phase 4 (onboarding): a one-shot `scripts/link-user.ts` or equivalent admin-only onboarding flow to upsert a `User` by email and create a `HouseholdMember` row. No invite UI in the API enforcement branch.
 
-Phase 3 (API enforcement): replace `String(body.actorId || (await getDefaultActorId()))` in every mutating API route with `await requireCurrentActor(householdId)`. Add membership checks to household-scoped GET routes. Filter `GET /api/households` to the user's memberships in non-demo mode. Add an origin-check middleware for CSRF on state-changing methods.
-
-Phase 4 (onboarding): a one-shot `scripts/link-user.ts` to upsert a `User` by email and create a `HouseholdMember` row. No invite UI in this branch.
-
-Phase 5 (flip): a separate Vercel project (or environment) with `DEMO_MODE` and `NEXT_PUBLIC_DEMO_MODE` unset, `AUTH_SECRET` set, and SMTP credentials provided.
+Phase 5 (flip): a separate Vercel project or environment with `DEMO_MODE` and `NEXT_PUBLIC_DEMO_MODE` unset, `AUTH_SECRET` set, SMTP credentials provided, and real household memberships created.
 
 ## Required future env vars
 
@@ -84,10 +107,10 @@ EMAIL_FROM=""         # The from address on magic-link emails.
 
 If `EMAIL_SERVER` and `EMAIL_FROM` are missing, the email provider is not registered and `/sign-in` shows an "auth not configured" notice. This is the safe default for the current hosted demo.
 
-## Current limitations that remain after Phase 1
+## Current limitations that remain after Phase 3
 
-- API routes still trust `body.actorId` and `searchParams.actorId`. Phase 3 closes this gap.
-- `getDefaultActorId()` and `getDefaultHouseholdId()` in `lib/services/household-service.ts` can still auto-create a "Local Admin" user and a "My Household" if called outside demo mode. They are documented as demo-only here. Phase 3 will hard-gate them and call sites will be replaced with `requireCurrentActor`.
+- Demo mode still intentionally trusts `actorId` to support hosted QA/demo exploration.
+- `getDefaultActorId()` and `getDefaultHouseholdId()` in `lib/services/household-service.ts` remain demo utilities. API enforcement routes no longer use them in non-demo auth paths.
 - No invite flow.
 - No password reset (magic link covers the equivalent flow).
-- No CSRF middleware on existing JSON APIs.
+- The same-origin guard is intentionally lightweight and route-local; there is no global CSRF middleware yet.

@@ -1,16 +1,19 @@
 import { HouseholdRole } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { apiErrorResponse, assertSameOriginRequest, clientActorFromBody, requireApiActor } from "@/lib/auth/api-auth";
+import { isDemoModeEnabled } from "@/lib/household-selection";
 import { prisma } from "@/lib/prisma";
-import { getDefaultActorId } from "@/lib/services/household-service";
 import { writeAuditLog } from "@/lib/services/audit-service";
-import { assertHouseholdPermission, PermissionError } from "@/lib/services/permissions-service";
+import { assertHouseholdPermission } from "@/lib/services/permissions-service";
 
 export async function POST(request: Request, { params }: { params: Promise<{ householdId: string }> }) {
   try {
+    assertSameOriginRequest(request);
     const { householdId } = await params;
     const contentType = request.headers.get("content-type") ?? "";
     const body = contentType.includes("application/json") ? await request.json() : Object.fromEntries((await request.formData()).entries());
-    const actorId = String(body.actorId || (await getDefaultActorId()));
+    const actor = await requireApiActor(householdId, clientActorFromBody(body));
+    const actorId = actor.actorId;
     await assertHouseholdPermission(householdId, actorId, "household:manage");
 
     const member = await prisma.householdMember.upsert({
@@ -40,11 +43,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ hou
     });
 
     if (!contentType.includes("application/json")) {
-      return NextResponse.redirect(new URL(`/household?householdId=${householdId}&actorId=${actorId}`, request.url), 303);
+      const redirectUrl = new URL(`/household?householdId=${householdId}`, request.url);
+      if (isDemoModeEnabled()) redirectUrl.searchParams.set("actorId", actorId);
+      return NextResponse.redirect(redirectUrl, 303);
     }
 
     return NextResponse.json({ member });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not update household member." }, { status: error instanceof PermissionError ? 403 : 400 });
+    return apiErrorResponse(error, "Could not update household member.");
   }
 }
