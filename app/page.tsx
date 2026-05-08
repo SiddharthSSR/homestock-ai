@@ -113,7 +113,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             tone="peach"
             icon={AlertCircle}
             action={
-              <PreservedQueryLink className="inline-flex rounded-md bg-peachDeep px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" href={household ? `/approve?householdId=${household.id}&actorId=${actorId}` : "/approve"}>
+              <PreservedQueryLink className="inline-flex rounded-md bg-peachDeep px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-paper hover:bg-cocoa" href={household ? `/approve?householdId=${household.id}` : "/approve"}>
                 Review
               </PreservedQueryLink>
             }

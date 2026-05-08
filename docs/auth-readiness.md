@@ -1,10 +1,31 @@
 # Auth Readiness
 
-HomeStock AI is moving from MVP `actorId` query-string switching to real authentication. Phases 1, 2, 3, and 4 are now complete: Auth.js scaffolding exists, non-demo UI no longer exposes demo actor switching, API routes no longer trust client-provided `actorId` outside demo mode, and developer/admin onboarding tooling exists for linking the first real user to an existing household. Demo mode is unchanged.
+HomeStock AI is moving from MVP `actorId` query-string switching to real authentication. Phases 1, 2, 3, 4, and 5 are now complete: Auth.js scaffolding exists, non-demo UI no longer exposes demo actor switching, API routes no longer trust client-provided `actorId` outside demo mode, developer/admin onboarding tooling exists for linking the first real user to an existing household, and the entire non-demo auth path can be smoke-tested locally without real SMTP. Demo mode is unchanged.
 
 ## Why actorId is demo-only
 
 `?actorId=...` and `?householdId=...` query parameters are how the demo lets QA testers "be" different household members without an account. In demo mode, API routes still honor those fields so seeded QA flows keep working. Outside demo mode, API routes ignore client-provided `actorId`, `requestedBy`, and `createdBy`; the current actor comes from the Auth.js session and the household membership row.
+
+## Phase 5 scope (non-demo auth smoke)
+
+Phase 5 makes non-demo auth runnable on a developer's laptop without standing up SMTP, Mailpit, or a real email provider. The full runbook is in `docs/non-demo-auth-smoke.md`.
+
+In:
+
+- `lib/auth/readiness.ts` — pure `computeAuthReadiness(env, demoMode)` helper. Same shape as the previous inline check, plus a new `devLog: boolean` field. Used by `lib/auth/config.ts` and unit tests.
+- `lib/auth/config.ts` — registers the Nodemailer provider when **either** `EMAIL_SERVER`+`EMAIL_FROM` are set **or** `AUTH_DEV_LOG_MAGIC_LINK="true"`. In dev-log mode the provider is constructed with placeholder server config and `sendVerificationRequest` overridden to write the sign-in URL to stdout.
+- `scripts/lib/link-user-helpers.ts` and `scripts/link-user.ts` gain `--create-household-if-missing`. Only valid with `--householdName`. Off by default. Off in `--dry-run` (the dry-run output marks the household line as "would create").
+- New runbook `docs/non-demo-auth-smoke.md` with a checklist that exercises sign-in, AppShell auth controls, the Phase 4 empty state, and the Phase 3 enforcement matrix (401, 403, ignored `requestedBy`, origin guard, `/api/households` filtering).
+
+Out:
+
+- No production email provider, no Resend integration.
+- No deployment of non-demo to Vercel.
+- No invite UI, no signup UI.
+- No schema changes.
+- No changes to `lib/auth/api-auth.ts` (Phase 3 enforcement is reused as-is).
+
+`AUTH_DEV_LOG_MAGIC_LINK` is local-only and must remain unset in any deployed environment. The runbook reinforces this.
 
 ## Phase 4 scope (onboarding tooling)
 

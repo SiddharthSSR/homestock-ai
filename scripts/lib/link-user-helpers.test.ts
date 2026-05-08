@@ -82,6 +82,26 @@ describe("parseLinkUserArgs — valid input", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.args.help).toBe(true);
   });
+
+  it("parses --create-household-if-missing with --householdName", () => {
+    const result = parseLinkUserArgs([
+      "--email",
+      "me@example.com",
+      "--role",
+      "ADMIN",
+      "--householdName",
+      "Smoke",
+      "--create-household-if-missing"
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.args.createHouseholdIfMissing).toBe(true);
+  });
+
+  it("defaults createHouseholdIfMissing to false when omitted", () => {
+    const result = parseLinkUserArgs(baseValidArgv);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.args.createHouseholdIfMissing).toBe(false);
+  });
 });
 
 describe("parseLinkUserArgs — invalid input", () => {
@@ -127,6 +147,20 @@ describe("parseLinkUserArgs — invalid input", () => {
   it("rejects unknown arguments", () => {
     const result = parseLinkUserArgs([...baseValidArgv, "--turbo"]);
     expect(result.ok).toBe(false);
+  });
+
+  it("rejects --create-household-if-missing combined with --householdId", () => {
+    const result = parseLinkUserArgs([
+      "--email",
+      "me@example.com",
+      "--role",
+      "ADMIN",
+      "--householdId",
+      "h_1",
+      "--create-household-if-missing"
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toMatch(/--householdName/);
   });
 });
 
@@ -278,6 +312,54 @@ describe("assertSafetyGuards — last-admin guard", () => {
   it("does not block when no existing membership exists", () => {
     expect(
       assertSafetyGuards({ ...base, existingRole: null, otherAdminCount: 0, allowLastAdminDemote: false })
+    ).toEqual({ ok: true });
+  });
+});
+
+// These tests pin the contract that the fixture guard fires by household NAME
+// only — it does not matter whether the household already exists or is about
+// to be created via --create-household-if-missing. Regression-prevention for
+// the Phase 5 create path.
+describe("assertSafetyGuards — fixture guard for newly created households", () => {
+  const createPathBase = {
+    demoMode: false,
+    allowDemo: false,
+    allowLastAdminDemote: false,
+    existingRole: null,
+    targetRole: "ADMIN",
+    otherAdminCount: 0
+  } as const;
+
+  it("blocks creating a missing fixture household without --allow-fixture", () => {
+    expect(
+      assertSafetyGuards({
+        ...createPathBase,
+        householdName: "QA Memory Household",
+        allowFixture: false
+      })
+    ).toEqual({
+      ok: false,
+      error: { kind: "fixture-household", householdName: "QA Memory Household" }
+    });
+  });
+
+  it("permits creating a missing fixture household with --allow-fixture", () => {
+    expect(
+      assertSafetyGuards({
+        ...createPathBase,
+        householdName: "QA Memory Household",
+        allowFixture: true
+      })
+    ).toEqual({ ok: true });
+  });
+
+  it("permits creating a missing non-fixture household without --allow-fixture", () => {
+    expect(
+      assertSafetyGuards({
+        ...createPathBase,
+        householdName: "Auth Smoke Household",
+        allowFixture: false
+      })
     ).toEqual({ ok: true });
   });
 });

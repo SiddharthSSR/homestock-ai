@@ -4,6 +4,8 @@ HomeStock AI does not have a self-serve signup or invite flow. The only way to l
 
 This is intentional: see `docs/auth-readiness.md` for the phased plan and the reasons we keep onboarding out-of-app.
 
+For a fully scripted local end-to-end test of non-demo auth (sign-in, session, API enforcement) without any SMTP setup, see [docs/non-demo-auth-smoke.md](non-demo-auth-smoke.md). That runbook uses this script with `--create-household-if-missing` to provision a one-shot smoke environment.
+
 ## When to use this
 
 - A first real human needs to sign in to a non-demo deployment.
